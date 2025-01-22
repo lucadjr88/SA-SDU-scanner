@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SDU mio
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare bisogna avere aperta la scheda della flotta specificata
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -12,7 +12,7 @@
     'use strict';
 
     let currentX = 0, currentY = 0;
-    let fleetName = 'inserisci il nome della flotta';
+    let fleetName = 'My_Fleet';
     let maxDistance = 5;
 
     function makeDraggable(el) {
@@ -304,12 +304,14 @@
                 if (item.distance < minDistance) {
                     minDistance = item.distance;
                     closestToMaxProb = item; // Memorizziamo la riga con la probabilità massima e la distanza minima
+                    percentualeLabel.textContent = item.prob;
+                    maxcoordtxt.value = item.x + ',' + item.y; // Aggiorniamo il campo di input con le coordinate
                 }
             }
         });
 
         // Creiamo la tabella e evidenziamo la riga più vicina
-        data.slice(0, 40).forEach(item => {
+        data.slice(0, 500).forEach(item => {
 
             const row = document.createElement('tr');
             row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${item.prob}</td>
@@ -318,8 +320,6 @@
 
             if (item === closestToMaxProb) {
                 row.style.backgroundColor = 'yellow'; // Evidenziamo solo la riga più vicina
-                percentualeLabel.textContent = item.prob;
-                maxcoordtxt.value = item.x + ',' + item.y; // Aggiorniamo il campo di input con le coordinate
             }
             table.appendChild(row);
         });
