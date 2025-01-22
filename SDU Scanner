@@ -1,0 +1,371 @@
+// ==UserScript==
+// @name         SDU Scanner
+// @namespace    http://tampermonkey.net/
+// @version      1.5
+// @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare bisogna avere aperta la scheda della flotta specificata
+// @author       lucadjr
+// @match        *://*atlas.eveeye.com/*
+// @grant        none
+// ==/UserScript==
+
+(function() {
+    'use strict';
+
+    let currentX = 0, currentY = 0;
+    let fleetName = '';
+    let maxDistance = 5;
+
+    function makeDraggable(el) {
+        el.style.position = 'absolute';
+        el.style.cursor = 'move';
+        let offsetX = 0, offsetY = 0, mouseX = 0, mouseY = 0;
+
+        const onMouseMove = (e) => {
+            e.preventDefault();
+            offsetX = mouseX - e.clientX;
+            offsetY = mouseY - e.clientY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            el.style.top = (el.offsetTop - offsetY) + "px";
+            el.style.left = (el.offsetLeft - offsetX) + "px";
+        };
+
+        const onMouseDown = (e) => {
+            if (['input', 'textarea', 'button', 'table'].includes(e.target.tagName.toLowerCase())) {
+                return;
+            }
+            e.preventDefault();
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        el.addEventListener('mousedown', onMouseDown);
+    }
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.top = '10px';
+    container.style.right = '10px';
+    container.style.zIndex = 1000;
+    container.style.padding = '10px';
+    container.style.backgroundColor = '#f9f9f9';
+    container.style.border = '1px solid #ccc';
+    container.style.borderRadius = '5px';
+    container.style.width = '400px';
+    container.style.maxHeight = '500px';
+    document.body.appendChild(container);
+    makeDraggable(container);
+
+
+    const headerContainer = document.createElement('div');
+    headerContainer.style.marginBottom = '10px';
+    container.appendChild(headerContainer);
+
+    // Aggiungere l'icona (puoi usare un'icona font o un'immagine)
+    const icon = document.createElement('img');
+    icon.src = 'https://play.staratlas.com/icon-small.png'; // Usa il tuo URL o icona
+    icon.alt = 'Icona';
+    icon.style.marginRight = '10px'; // Distanza tra icona e testo
+    headerContainer.appendChild(icon);
+
+    // Aggiungere il titolo
+    const title = document.createElement('span');
+    title.textContent = 'SDU Scanner by lucadjr';
+    title.style.fontSize = '20px';
+    title.style.fontWeight = 'bold';
+    headerContainer.appendChild(title);
+
+
+    const currentPosition = document.createElement('div');
+    currentPosition.textContent = 'Posizione attuale: N/A';
+    currentPosition.style.marginBottom = '10px';
+    container.appendChild(currentPosition);
+
+    const inputContainer = document.createElement('div');
+    inputContainer.style.display = 'flex';
+    inputContainer.style.marginBottom = '10px';
+    container.appendChild(inputContainer);
+
+    const fleetInputContainer = document.createElement('div');
+    fleetInputContainer.style.display = 'flex';
+    fleetInputContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
+    fleetInputContainer.style.marginBottom = '10px';
+    inputContainer.appendChild(fleetInputContainer);
+
+    const fleetInputLabel = document.createElement('label');
+    fleetInputLabel.textContent = 'Nome Flotta: ';
+    fleetInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+    fleetInputContainer.appendChild(fleetInputLabel);
+
+    const fleetInput = document.createElement('input');
+    fleetInput.type = 'text';
+    fleetInput.value = fleetName;
+    fleetInput.size = '15'
+    fleetInput.style.padding = '5px';
+    fleetInput.style.boxSizing = 'border-box';
+    fleetInput.addEventListener('input', (e) => {
+        fleetName = e.target.value;
+    });
+    fleetInputContainer.appendChild(fleetInput);
+
+    const distanceInputContainer = document.createElement('div');
+    distanceInputContainer.style.display = 'flex';
+    distanceInputContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
+    distanceInputContainer.style.marginLeft = '10px'; // Spazio sopra l'etichetta
+    distanceInputContainer.style.marginBottom = '10px';
+    inputContainer.appendChild(distanceInputContainer);
+
+    const distanceInputLabel = document.createElement('label');
+    distanceInputLabel.textContent = 'Distanza Max: ';
+    distanceInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+    distanceInputContainer.appendChild(distanceInputLabel);
+
+    const distanceInput = document.createElement('input');
+    distanceInput.type = 'number';
+    distanceInput.min = '1';
+    distanceInput.max = '99'; // Limita il numero massimo a 99
+    distanceInput.value = '5';
+    distanceInput.size = '6'; // Limita l'input a due cifre
+    distanceInput.style.padding = '5px';
+    distanceInput.style.boxSizing = 'border-box';
+    distanceInput.addEventListener('input', (e) => {
+        maxDistance = e.target.value ? parseInt(e.target.value, 10) : Infinity;
+        updateTable(currentData);
+    });
+    distanceInputContainer.appendChild(distanceInput);
+
+    const sortContainer = document.createElement('div');
+    sortContainer.style.display = 'flex';
+    sortContainer.style.flexDirection = 'column';
+    sortContainer.style.marginLeft = '10px';
+    inputContainer.appendChild(sortContainer);
+
+    const probContainer = document.createElement('div');
+    probContainer.style.display = 'flex';
+    probContainer.style.marginLeft = '10px';
+    sortContainer.appendChild(probContainer);
+
+    const sortProbLabel = document.createElement('label');
+    sortProbLabel.textContent = 'Ordina per %';
+    probContainer.appendChild(sortProbLabel);
+
+    const sortProbRadio = document.createElement('input');
+    sortProbRadio.type = 'radio';
+    sortProbRadio.name = 'sortOption';
+    sortProbRadio.value = 'prob';
+    sortProbRadio.checked = true;
+    probContainer.appendChild(sortProbRadio);
+
+    const DistanceContainer = document.createElement('div');
+    DistanceContainer.style.display = 'flex';
+    DistanceContainer.style.marginLeft = '10px';
+    sortContainer.appendChild(DistanceContainer);
+
+    const sortDistanceLabel = document.createElement('label');
+    sortDistanceLabel.textContent = 'Ordina per Distanza';
+    DistanceContainer.appendChild(sortDistanceLabel);
+
+    const sortDistanceRadio = document.createElement('input');
+    sortDistanceRadio.type = 'radio';
+    sortDistanceRadio.name = 'sortOption';
+    sortDistanceRadio.value = 'distance';
+    DistanceContainer.appendChild(sortDistanceRadio);
+
+    const ResultContainer = document.createElement('div');
+    ResultContainer.style.display = 'flex';
+    ResultContainer.style.marginLeft = '10px';
+    sortContainer.appendChild(ResultContainer);
+
+    const percentualeLabel = document.createElement('label');
+    percentualeLabel.textContent = '';
+    percentualeLabel.style.fontSize = '14px'; // Modifica la dimensione del font
+    percentualeLabel.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
+    percentualeLabel.style.fontWeight = 'bold'; // Testo in grassetto
+    percentualeLabel.style.marginTop = '3px'; // Margine destro
+    percentualeLabel.style.marginRight = '5px'; // Margine destro
+    ResultContainer.appendChild(percentualeLabel);
+
+    const maxcoordtxt = document.createElement('input');
+    maxcoordtxt.type = 'text';
+    maxcoordtxt.name = 'maxcoordtxt';
+    maxcoordtxt.size = '5';
+    maxcoordtxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    ResultContainer.appendChild(maxcoordtxt);
+
+    const button = document.createElement('button');
+    button.textContent = 'Avvia Scansione Automatica';
+    button.style.flex = '1';
+    button.style.padding = '10px';
+    button.style.backgroundColor = '#007BFF';
+    button.style.color = '#fff';
+    button.style.border = 'none';
+    button.style.borderRadius = '5px';
+    button.style.cursor = 'pointer';
+    container.appendChild(button);
+
+    const tablecontainer = document.createElement('div');
+    tablecontainer.style.maxHeight = '300px';
+    tablecontainer.style.overflowY = 'auto';
+    container.appendChild(tablecontainer);
+
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.marginTop = '10px';
+    table.style.marginBottom = '10px';
+    tablecontainer.appendChild(table);
+
+    const headerRow = document.createElement('tr');
+    headerRow.innerHTML = '<th style="border-bottom: 1px solid #ccc;">Prob (%)</th><th style="border-bottom: 1px solid #ccc;">Coordinate (X,Y)</th><th style="border-bottom: 1px solid #ccc;">Distanza</th>';
+    table.appendChild(headerRow);
+
+    const byebyecontainer = document.createElement('div');
+    byebyecontainer.style.border = 'solid';
+    byebyecontainer.style.borderColor = 'gray';
+    container.appendChild(byebyecontainer);
+
+    const byebye = document.createElement('label');
+    byebye.textContent = 'Report bugs, improvements or comment at lucadjr@hotmail.it                        if you like the app please donate 7sZFMdaGCATXsJuWfj19ExnLt9P7RVm4Bykmvz2Jrh5x';
+    byebyecontainer.appendChild(byebye);
+
+
+    button.addEventListener('click', toggleScan);
+
+    let intervalId = null;
+    let currentData = [];
+
+    function toggleScan() {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+            button.textContent = 'Avvia Scansione Automatica';
+        } else {
+            scanData();
+            intervalId = setInterval(scanData, 2000);
+            button.textContent = 'Arresta Scansione Automatica';
+        }
+    }
+
+    function scanData() {
+        updateFleetPosition();
+        const elements = document.querySelectorAll('.sector_sdu_txt');
+        const data = [];
+
+        elements.forEach(el => {
+            const prob = el.textContent.trim();
+
+            // Filtra gli elementi con prob validi (non 0% e non vuoti)
+            if (prob !== '0%' && prob !== '') {
+                const idParts = el.id.split('_');
+                const x = parseFloat(idParts[idParts.length - 2]);
+                const y = parseFloat(idParts[idParts.length - 1]);
+                const distance = calculateDistance(currentX, currentY, x, y);
+                data.push({ prob, x, y, distance });
+            }
+        });
+
+        currentData = data;
+        table.innerHTML = '<tr><th style="border-bottom: 1px solid #ccc;">Prob (%)</th><th style="border-bottom: 1px solid #ccc;">Coordinate (X,Y)</th><th style="border-bottom: 1px solid #ccc;">Distanza</th></tr>';
+        if (sortProbRadio.checked) {
+            currentData.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
+            updateTable(currentData);
+        } else {
+            currentData.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+            updateTable(currentData);
+        }
+    }
+
+    function updateTable(data) {
+
+        let maxProbInRange = -1;
+        let closestToMaxProb = null;
+
+        // Prima, troviamo la probabilità massima nel range
+        data.forEach(item => {
+            if (item.distance <= maxDistance) {
+                if (parseFloat(item.prob) > maxProbInRange) {
+                    maxProbInRange = parseFloat(item.prob);
+                }
+            }
+        });
+
+        // Ora, tra le righe con la probabilità massima, troviamo la più vicina
+        let minDistance = Infinity;
+        data.forEach(item => {
+            if (item.distance <= maxDistance && parseFloat(item.prob) === maxProbInRange) {
+                if (item.distance < minDistance) {
+                    minDistance = item.distance;
+                    closestToMaxProb = item; // Memorizziamo la riga con la probabilità massima e la distanza minima
+                }
+            }
+        });
+
+        // Creiamo la tabella e evidenziamo la riga più vicina
+        data.slice(0, 40).forEach(item => {
+
+            const row = document.createElement('tr');
+            row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${item.prob}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.x},${item.y}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.distance}</td>`;
+
+            if (item === closestToMaxProb) {
+                row.style.backgroundColor = 'yellow'; // Evidenziamo solo la riga più vicina
+                percentualeLabel.textContent = item.prob;
+                maxcoordtxt.value = item.x + ',' + item.y; // Aggiorniamo il campo di input con le coordinate
+            }
+            table.appendChild(row);
+        });
+
+    }
+
+    function calculateDistance(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
+    }
+
+    function updateFleetPosition() {
+        const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${fleetName}"]`);
+        if (fleetRow) {
+            const stateRow = fleetRow.closest('tr').nextElementSibling;
+            const tdElement = stateRow.querySelector('#fleet_selected_state');
+            if (tdElement) {
+                // Estrai tutte le coordinate presenti nel td
+                const coordElements = tdElement.querySelectorAll('.ui_coordinate');
+                if (coordElements.length > 0) {
+                    // Mappa tutte le coordinate in formato [X, Y]
+                    const allCoords = Array.from(coordElements).map(coordElement =>
+                        coordElement.textContent.trim().replace('|', ',')
+                    );
+
+                    // Prendi l'ultima serie di coordinate
+                    const finalCoords = allCoords[allCoords.length - 1];
+                    [currentX, currentY] = finalCoords.split(',').map(coord => parseFloat(coord.trim()));
+
+                    // Aggiorna il textContent con un messaggio flessibile
+                    const scenarioDescription = tdElement.textContent
+                        .replace(/\s+/g, ' ') // Rimuove spazi multipli
+                        .trim();
+                    currentPosition.textContent = `${scenarioDescription.replace('|', ',')}`;
+                } else {
+                    // Nessuna coordinata trovata
+                    currentPosition.textContent = 'Posizione attuale: N/A';
+                }
+            } else {
+                currentPosition.textContent = 'Posizione attuale: N/A';
+            }
+        } else {
+            currentPosition.textContent = 'Posizione attuale: N/A';
+        }
+    }
+
+
+
+})();
+
+
