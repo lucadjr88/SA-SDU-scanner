@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SDU Scanner
+// @name         SDU mio
 // @namespace    http://tampermonkey.net/
 // @version      1.5
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare bisogna avere aperta la scheda della flotta specificata
@@ -12,7 +12,7 @@
     'use strict';
 
     let currentX = 0, currentY = 0;
-    let fleetName = '';
+    let fleetName = 'inserisci il nome della flotta';
     let maxDistance = 5;
 
     function makeDraggable(el) {
@@ -31,7 +31,7 @@
         };
 
         const onMouseDown = (e) => {
-            if (['input', 'textarea', 'button', 'table'].includes(e.target.tagName.toLowerCase())) {
+            if (['input', 'textarea', 'button', 'table', 'label'].includes(e.target.tagName.toLowerCase())) {
                 return;
             }
             e.preventDefault();
@@ -233,6 +233,7 @@
 
     const byebye = document.createElement('label');
     byebye.textContent = 'Report bugs, improvements or comment at lucadjr@hotmail.it                        if you like the app please donate 7sZFMdaGCATXsJuWfj19ExnLt9P7RVm4Bykmvz2Jrh5x';
+    byebye.style.userSelect = 'text';
     byebyecontainer.appendChild(byebye);
 
 
