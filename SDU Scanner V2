@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SDU Scanner V2
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      2
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare bisogna avere aperta la scheda della flotta specificata
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
