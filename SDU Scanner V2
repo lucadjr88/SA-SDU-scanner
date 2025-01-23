@@ -66,6 +66,25 @@
     makeDraggable(container);
 
 
+    const closeButton = document.createElement('button');
+    closeButton.textContent = 'X';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '5px';
+    closeButton.style.right = '5px';
+    closeButton.style.backgroundColor = 'red';
+    closeButton.style.color = 'white';
+    closeButton.style.border = 'none';
+    closeButton.style.borderRadius = '50%';
+    closeButton.style.width = '25px';
+    closeButton.style.height = '25px';
+    closeButton.style.cursor = 'pointer';
+
+    closeButton.onclick = function() {
+        container.remove(); // Rimuove il div dal DOM
+    };
+
+    container.appendChild(closeButton);
+
     const headerContainer = document.createElement('div');
     headerContainer.style.marginBottom = '10px';
     container.appendChild(headerContainer);
@@ -181,8 +200,8 @@
         percLabelContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
         percLabelContainer.style.marginLeft = '10px'; // Spazio sopra l'etichetta
         percLabelContainer.style.marginBottom = '10px';
-        ResultContainer.appendChild(percLabelContainer); 
-        
+        ResultContainer.appendChild(percLabelContainer);
+
             const percResultLabel = document.createElement('label');
             percResultLabel.textContent = '%';
             percResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
@@ -193,7 +212,7 @@
             percentualeLabel1.style.fontSize = '14px'; // Modifica la dimensione del font
             percentualeLabel1.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
             percentualeLabel1.style.fontWeight = 'bold'; // Testo in grassetto
-            percentualeLabel1.style.margin = '6px'; 
+            percentualeLabel1.style.margin = '6px';
             percLabelContainer.appendChild(percentualeLabel1);
 
             const percentualeLabel2 = document.createElement('label');
@@ -201,7 +220,7 @@
             percentualeLabel2.style.fontSize = '14px'; // Modifica la dimensione del font
             percentualeLabel2.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
             percentualeLabel2.style.fontWeight = 'bold'; // Testo in grassetto
-            percentualeLabel2.style.margin = '6px'; 
+            percentualeLabel2.style.margin = '6px';
             percLabelContainer.appendChild(percentualeLabel2);
 
             const percentualeLabel3 = document.createElement('label');
@@ -209,16 +228,16 @@
             percentualeLabel3.style.fontSize = '14px'; // Modifica la dimensione del font
             percentualeLabel3.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
             percentualeLabel3.style.fontWeight = 'bold'; // Testo in grassetto
-            percentualeLabel3.style.margin = '6px'; 
-            percLabelContainer.appendChild(percentualeLabel3);   
-            
+            percentualeLabel3.style.margin = '6px';
+            percLabelContainer.appendChild(percentualeLabel3);
+
         const percCoordContainer = document.createElement('div');
         percCoordContainer.style.display = 'flex';
         percCoordContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
         percCoordContainer.style.marginLeft = '10px'; // Spazio sopra l'etichetta
         percCoordContainer.style.marginBottom = '10px';
-        ResultContainer.appendChild(percCoordContainer);    
-        
+        ResultContainer.appendChild(percCoordContainer);
+
             const coordResultLabel = document.createElement('label');
             coordResultLabel.textContent = 'Coord result';
             coordResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
@@ -247,8 +266,8 @@
             percCoordTxt3.style.margin = '4px';
             percCoordTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt3);
-            
-            
+
+
     const sortContainer = document.createElement('div');
     sortContainer.style.display = 'flex';
     sortContainer.style.flexDirection = 'column';
@@ -462,4 +481,3 @@
 
 
 })();
-
