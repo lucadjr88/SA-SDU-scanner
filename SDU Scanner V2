@@ -61,7 +61,7 @@
     container.style.border = '1px solid #ccc';
     container.style.borderRadius = '5px';
     container.style.width = '400px';
-    container.style.maxHeight = '500px';
+    container.style.maxHeight = '700px';
     document.body.appendChild(container);
     makeDraggable(container);
 
