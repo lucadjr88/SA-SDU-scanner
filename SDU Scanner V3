@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         SDU Scanner V2
+// @name         SDU Scanner V3
 // @namespace    http://tampermonkey.net/
 // @version      2
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare bisogna avere aperta la scheda della flotta specificata
@@ -16,6 +16,7 @@
     let maxDistance1 = 5;
     let maxDistance2 = 15;
     let maxDistance3 = 30;
+    let selectedColor = 'yellow';
 
     function makeDraggable(el) {
         el.style.position = 'absolute';
@@ -33,7 +34,7 @@
         };
 
         const onMouseDown = (e) => {
-            if (['input', 'textarea', 'button', 'table', 'label'].includes(e.target.tagName.toLowerCase())) {
+            if (['input', 'textarea', 'button', 'table', 'label', 'select'].includes(e.target.tagName.toLowerCase())) {
                 return;
             }
             e.preventDefault();
@@ -120,21 +121,93 @@
     fleetInputContainer.style.marginBottom = '10px';
     inputContainer.appendChild(fleetInputContainer);
 
-    const fleetInputLabel = document.createElement('label');
-    fleetInputLabel.textContent = 'Nome Flotta: ';
-    fleetInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
-    fleetInputContainer.appendChild(fleetInputLabel);
+        const fleetInputLabel = document.createElement('label');
+        fleetInputLabel.textContent = 'Nome Flotta: ';
+        fleetInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+        fleetInputContainer.appendChild(fleetInputLabel);
 
-    const fleetInput = document.createElement('input');
-    fleetInput.type = 'text';
-    fleetInput.value = fleetName;
-    fleetInput.size = '15'
-    fleetInput.style.padding = '5px';
-    fleetInput.style.boxSizing = 'border-box';
-    fleetInput.addEventListener('input', (e) => {
-        fleetName = e.target.value;
-    });
-    fleetInputContainer.appendChild(fleetInput);
+        const fleetInput = document.createElement('input');
+        fleetInput.type = 'text';
+        fleetInput.value = fleetName;
+        fleetInput.size = '15'
+        fleetInput.style.padding = '5px';
+        fleetInput.style.boxSizing = 'border-box';
+        fleetInput.addEventListener('input', (e) => {
+            fleetName = e.target.value;
+        });
+        fleetInputContainer.appendChild(fleetInput);
+
+        const ocrcheckContainer = document.createElement('div');
+        ocrcheckContainer.style.display = 'flex';
+        ocrcheckContainer.style.margin = '1px';
+        fleetInputContainer.appendChild(ocrcheckContainer);
+
+            const ocrLabel = document.createElement('label');
+            ocrLabel.textContent = 'Ocr facilitator ';
+            ocrcheckContainer.appendChild(ocrLabel);        
+
+            const ocrcheckbox = document.createElement('input');
+            ocrcheckbox.type = 'checkbox';
+            ocrcheckbox.name = 'ocrenable';
+            ocrcheckbox.checked = false;
+            ocrcheckbox.addEventListener('change', function () {
+                if (ocrcheckbox.checked) {
+                    ocrsizeContainer.style.visibility = 'visible';
+                    colorSelect.style.display = 'block';
+                } else {
+                    ocrsizeContainer.style.visibility = 'hidden';
+                    colorSelect.style.display = 'none'; // Inizialmente nascosto
+                    ocrUpdatesize(14);
+                    selectedColor = 'yellow';
+                    ocrUpdatecolor(selectedColor);
+                }
+            });
+            ocrcheckContainer.appendChild(ocrcheckbox);
+
+        const ocrsizeContainer = document.createElement('div');
+        ocrsizeContainer.style.visibility = 'hidden';
+        ocrsizeContainer.style.display = 'center';
+        ocrsizeContainer.style.margin = '1px';
+        fleetInputContainer.appendChild(ocrsizeContainer);    
+
+            const percsizeLabel = document.createElement('label');
+            percsizeLabel.textContent = 'Size ';
+            ocrsizeContainer.appendChild(percsizeLabel); 
+            
+            const percsizeInput = document.createElement('input');
+            percsizeInput.type = 'number';
+            percsizeInput.min = '1';
+            percsizeInput.max = '99'; // Limita il numero massimo a 99
+            percsizeInput.value = '14';
+            percsizeInput.size = '6'; // Limita l'input a due cifre
+            percsizeInput.style.padding = '5px';
+            percsizeInput.style.boxSizing = 'border-box';
+            percsizeInput.addEventListener('input', (e) => {
+                let orcsize = 0;
+                orcsize = e.target.value ? parseInt(e.target.value, 10) : Infinity;
+                ocrUpdatesize(orcsize);
+            });
+            ocrsizeContainer.appendChild(percsizeInput);
+
+            const percsizeLabel2 = document.createElement('label');
+            percsizeLabel2.textContent = 'px';
+            ocrsizeContainer.appendChild(percsizeLabel2); 
+        
+        // Creazione del menu a tendina (select)
+        const colorSelect = document.createElement('select');
+        colorSelect.style.display = 'none';
+        const colors = ['yellow', 'red', 'green', 'blue', 'pink', 'orange'];
+        colors.forEach(color => {
+            const option = document.createElement('option');
+            option.value = color;
+            option.textContent = color;
+            colorSelect.appendChild(option);
+        });
+        colorSelect.addEventListener('change', function () {
+            selectedColor = colorSelect.value; // Colore selezionato
+            ocrUpdatecolor(selectedColor);
+        });
+        fleetInputContainer.appendChild(colorSelect);    
 
     const ResultContainer = document.createElement('div');
     ResultContainer.style.display = 'flex';
@@ -191,7 +264,7 @@
             distanceInput3.style.boxSizing = 'border-box';
             distanceInput3.addEventListener('input', (e) => {
                 maxDistance3 = e.target.value ? parseInt(e.target.value, 10) : Infinity;
-                updateTable(currentData);
+                updateTable(currentData);  
             });
             distanceInputContainer.appendChild(distanceInput3);
 
@@ -248,7 +321,7 @@
             percCoordTxt1.name = 'percCoordTxt1';
             percCoordTxt1.size = '5';
             percCoordTxt1.style.margin = '4px';
-            percCoordTxt1.style.width = '50px'; // Imposta una larghezza specifica in pixel
+            percCoordTxt1.style.width = '35px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt1);
 
             const percCoordTxt2 = document.createElement('input');
@@ -256,7 +329,7 @@
             percCoordTxt2.name = 'percCoordTxt2';
             percCoordTxt2.size = '5';
             percCoordTxt2.style.margin = '4px';
-            percCoordTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
+            percCoordTxt2.style.width = '35px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt2);
 
             const percCoordTxt3 = document.createElement('input');
@@ -264,7 +337,7 @@
             percCoordTxt3.name = 'percCoordTxt3';
             percCoordTxt3.size = '5';
             percCoordTxt3.style.margin = '4px';
-            percCoordTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
+            percCoordTxt3.style.width = '35px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt3);
 
 
@@ -432,7 +505,7 @@
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.distance}</td>`;
 
             if (item === closestToMaxProb1 || item === closestToMaxProb2 || item === closestToMaxProb3) {
-                row.style.backgroundColor = 'yellow'; // Evidenziamo solo la riga più vicina
+                row.style.backgroundColor = selectedColor; // Evidenziamo solo la riga più vicina
             }
             table.appendChild(row);
         });
@@ -478,6 +551,24 @@
         }
     }
 
+    function ocrUpdatesize(size){
+            let sizestr = String(size) + 'px';
+            percentualeLabel1.style.fontSize = sizestr; // Modifica la dimensione del font
+            percentualeLabel2.style.fontSize = sizestr; // Modifica la dimensione del font
+            percentualeLabel3.style.fontSize = sizestr; // Modifica la dimensione del font
+            percCoordTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+            percCoordTxt2.style.fontSize = sizestr; // Modifica la dimensione del font 
+            percCoordTxt3.style.fontSize = sizestr; // Modifica la dimensione del font
+            let sizeelement = String(35 + 3 * (size - 13)) + 'px';
+            percCoordTxt1.style.width = sizeelement;
+            percCoordTxt2.style.width = sizeelement;
+            percCoordTxt3.style.width = sizeelement;                       
+    }
 
+    function ocrUpdatecolor(color){
+        percentualeLabel1.style.backgroundColor = color; // Colore di sfondo giallo
+        percentualeLabel2.style.backgroundColor = color; // Colore di sfondo giallo
+        percentualeLabel3.style.backgroundColor = color; // Colore di sfondo giallo
+    }
 
 })();
