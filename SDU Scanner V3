@@ -312,7 +312,7 @@
         ResultContainer.appendChild(percCoordContainer);
 
             const coordResultLabel = document.createElement('label');
-            coordResultLabel.textContent = 'Coord result';
+            coordResultLabel.textContent = 'Coords';
             coordResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
             percCoordContainer.appendChild(coordResultLabel);
 
