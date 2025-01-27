@@ -321,7 +321,7 @@
             percCoordTxt1.name = 'percCoordTxt1';
             percCoordTxt1.size = '5';
             percCoordTxt1.style.margin = '4px';
-            percCoordTxt1.style.width = '35px'; // Imposta una larghezza specifica in pixel
+            percCoordTxt1.style.width = '50px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt1);
 
             const percCoordTxt2 = document.createElement('input');
@@ -329,7 +329,7 @@
             percCoordTxt2.name = 'percCoordTxt2';
             percCoordTxt2.size = '5';
             percCoordTxt2.style.margin = '4px';
-            percCoordTxt2.style.width = '35px'; // Imposta una larghezza specifica in pixel
+            percCoordTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt2);
 
             const percCoordTxt3 = document.createElement('input');
@@ -337,7 +337,7 @@
             percCoordTxt3.name = 'percCoordTxt3';
             percCoordTxt3.size = '5';
             percCoordTxt3.style.margin = '4px';
-            percCoordTxt3.style.width = '35px'; // Imposta una larghezza specifica in pixel
+            percCoordTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
             percCoordContainer.appendChild(percCoordTxt3);
 
 
@@ -559,7 +559,7 @@
             percCoordTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
             percCoordTxt2.style.fontSize = sizestr; // Modifica la dimensione del font 
             percCoordTxt3.style.fontSize = sizestr; // Modifica la dimensione del font
-            let sizeelement = String(35 + 3 * (size - 13)) + 'px';
+            let sizeelement = String(50 + 3 * (size - 13)) + 'px';
             percCoordTxt1.style.width = sizeelement;
             percCoordTxt2.style.width = sizeelement;
             percCoordTxt3.style.width = sizeelement;                       
