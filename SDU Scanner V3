@@ -99,7 +99,7 @@
 
     // Aggiungere il titolo
     const title = document.createElement('span');
-    title.textContent = 'SDU Scanner V2 by lucadjr';
+    title.textContent = 'SDU Scanner V3 by lucadjr';
     title.style.fontSize = '20px';
     title.style.fontWeight = 'bold';
     headerContainer.appendChild(title);
