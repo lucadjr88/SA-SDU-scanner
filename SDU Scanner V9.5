@@ -365,7 +365,7 @@ inputContainer.appendChild(distanceInputContainer);
                 IncidenzaCountTxt.size = '2'; // Limita l'input a due cifre
                 IncidenzaCountTxt.style.padding = '5px';
                 IncidenzaCountTxt.addEventListener('input', (e) => {
-                    incidenza_count = e.target.value ? parseFloat(e.target.value) : Infinity;
+                    incidenza_count = parseFloat(e.target.value);
                 });
                 percCoordContainer.appendChild(IncidenzaCountTxt);
 
@@ -383,7 +383,7 @@ inputContainer.appendChild(distanceInputContainer);
                 IncidenzaSduTxt.size = '2'; // Limita l'input a due cifre
                 IncidenzaSduTxt.style.padding = '5px';
                 IncidenzaSduTxt.addEventListener('input', (e) => {
-                    incidenza_sdu = e.target.value ? parseFloat(e.target.value) : Infinity;
+                    incidenza_sdu = parseFloat(e.target.value);
                 });percCoordContainer.appendChild(IncidenzaSduTxt);
 
     const percLabelContainer = document.createElement('div');
@@ -631,7 +631,7 @@ inputContainer.appendChild(distanceInputContainer);
 
     }
     function calculateCoeff(prob, count, sdu) {
-        return (parseFloat(prob) / ( (parseFloat(count)*incidenza_count)) /((parseFloat(sdu)*incidenza_sdu)+1) )
+        return (parseFloat(prob) / ( (parseFloat(count)*incidenza_count)+1) /((parseFloat(sdu)*incidenza_sdu)+1) )
     }
     function calculateDistance(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
