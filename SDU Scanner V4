@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V4
+// @name         SDU Scanner V9.5
 // @namespace    http://tampermonkey.net/
-// @version      4
+// @version      7
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,14 +10,16 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V4 by lucadjr';
+    let titolo = 'SDU Scanner V9.5 by lucadjr';
 
     let currentX = 0, currentY = 0;
-    let fleetName = 'My_Fleet';
+    let fleetName = 'My Fleet';
     let maxDistance1 = 5;
-    let maxDistance2 = 15;
-    let maxDistance3 = 30;
     let selectedColor = 'yellow';
+    let fuel = 0;
+    let foodValue = 0;
+    let incidenza_sdu = 0.7;
+    let incidenza_count = 0.3;
 
     function makeDraggable(el) {
         el.style.position = 'absolute';
@@ -53,373 +55,385 @@
         el.addEventListener('mousedown', onMouseDown);
     }
 
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.top = '10px';
-    container.style.right = '10px';
-    container.style.zIndex = 1000;
-    container.style.padding = '10px';
-    container.style.backgroundColor = '#f9f9f9';
-    container.style.border = '1px solid #ccc';
-    container.style.borderRadius = '5px';
-    container.style.width = '400px';
-    container.style.maxHeight = '700px';
-    document.body.appendChild(container);
-    makeDraggable(container);
+// ...existing code...
+const container = document.createElement('div');
+container.style.position = 'fixed';
+container.style.top = '10px';
+container.style.right = '10px';
+container.style.zIndex = 1000;
+container.style.padding = '10px';
+container.style.backgroundColor = '#f9f9f9';
+container.style.border = '1px solid #ccc';
+container.style.borderRadius = '5px';
+container.style.width = '400px';
+container.style.maxHeight = '700px';
+//container.style.border = '1px solid black'; // Aggiungi questa linea
+document.body.appendChild(container);
+makeDraggable(container);
+
+const closeButton = document.createElement('button');
+closeButton.textContent = 'X';
+closeButton.style.position = 'absolute';
+closeButton.style.top = '5px';
+closeButton.style.right = '5px';
+closeButton.style.backgroundColor = 'red';
+closeButton.style.color = 'white';
+closeButton.style.border = 'none';
+closeButton.style.borderRadius = '50%';
+closeButton.style.width = '25px';
+closeButton.style.height = '25px';
+closeButton.style.cursor = 'pointer';
+
+closeButton.onclick = function () {
+    container.remove(); // Rimuove il div dal DOM
+};
+
+container.appendChild(closeButton);
+
+const headerContainer = document.createElement('div');
+headerContainer.style.marginBottom = '10px';
+//headerContainer.style.border = '1px solid black'; // Aggiungi questa linea
+container.appendChild(headerContainer);
+
+// Aggiungere l'icona (puoi usare un'icona font o un'immagine)
+const icon = document.createElement('img');
+icon.src = 'https://play.staratlas.com/icon-small.png'; // Usa il tuo URL o icona
+icon.alt = 'Icona';
+icon.style.marginRight = '10px'; // Distanza tra icona e testo
+headerContainer.appendChild(icon);
+
+// Aggiungere il titolo
+const title = document.createElement('span');
+title.textContent = titolo;
+title.style.fontSize = '20px';
+title.style.fontWeight = 'bold';
+headerContainer.appendChild(title);
+
+const currentPosition = document.createElement('div');
+currentPosition.textContent = 'Posizione attuale: N/A';
+currentPosition.style.marginBottom = '10px';
+currentPosition.style.backgroundColor = 'red';
+//currentPosition.style.border = '1px solid black'; // Aggiungi questa linea
+container.appendChild(currentPosition);
+
+const inputContainer = document.createElement('div');
+inputContainer.style.display = 'flex';
+inputContainer.style.marginBottom = '10px';
+//inputContainer.style.border = '1px solid black'; // Aggiungi questa linea
+container.appendChild(inputContainer);
+
+const fleetInputContainer = document.createElement('div');
+fleetInputContainer.style.display = 'flex';
+fleetInputContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
+fleetInputContainer.style.margin = '5px';
+//fleetInputContainer.style.border = '1px solid black'; // Aggiungi questa linea
+inputContainer.appendChild(fleetInputContainer);
+
+const fleetInputLabel = document.createElement('label');
+fleetInputLabel.textContent = 'Nome Flotta: ';
+fleetInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+fleetInputContainer.appendChild(fleetInputLabel);
+
+const fleetInput = document.createElement('input');
+fleetInput.type = 'text';
+fleetInput.value = fleetName;
+fleetInput.size = '15'
+fleetInput.style.padding = '5px';
+fleetInput.style.boxSizing = 'border-box';
+fleetInput.addEventListener('input', (e) => {
+    fleetName = e.target.value;
+});
+fleetInputContainer.appendChild(fleetInput);
+
+const percLabel = document.createElement('label');
+percLabel.textContent = '%';
+percLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+fleetInputContainer.appendChild(percLabel);
+
+const coeffLabel = document.createElement('label');
+coeffLabel.textContent = 'Coeff';
+coeffLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+fleetInputContainer.appendChild(coeffLabel);
+
+const coordResultLabel = document.createElement('label');
+coordResultLabel.textContent = 'Coords';
+coordResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+fleetInputContainer.appendChild(coordResultLabel);
+
+const ocrcheckContainer = document.createElement('div');
+ocrcheckContainer.style.display = 'flex';
+ocrcheckContainer.style.margin = '1px';
+//ocrcheckContainer.style.border = '1px solid black'; // Aggiungi questa linea
+fleetInputContainer.appendChild(ocrcheckContainer);
+
+const ocrLabel = document.createElement('label');
+ocrLabel.textContent = 'Ocr facilitator ';
+ocrcheckContainer.appendChild(ocrLabel);
+
+const ocrcheckbox = document.createElement('input');
+ocrcheckbox.type = 'checkbox';
+ocrcheckbox.name = 'ocrenable';
+ocrcheckbox.checked = false;
+ocrcheckbox.addEventListener('change', function () {
+    if (ocrcheckbox.checked) {
+        ocrsizeContainer.style.visibility = 'visible';
+        colorSelect.style.display = 'block';
+    } else {
+        ocrsizeContainer.style.visibility = 'hidden';
+        colorSelect.style.display = 'none'; // Inizialmente nascosto
+        ocrUpdatesize(14);
+        selectedColor = 'yellow';
+        ocrUpdatecolor(selectedColor);
+    }
+});
+ocrcheckContainer.appendChild(ocrcheckbox);
+
+const ocrsizeContainer = document.createElement('div');
+ocrsizeContainer.style.visibility = 'hidden';
+ocrsizeContainer.style.display = 'center';
+ocrsizeContainer.style.margin = '1px';
+//ocrsizeContainer.style.border = '1px solid black'; // Aggiungi questa linea
+fleetInputContainer.appendChild(ocrsizeContainer);
+
+const percsizeLabel = document.createElement('label');
+percsizeLabel.textContent = 'Size ';
+ocrsizeContainer.appendChild(percsizeLabel);
+
+const percsizeInput = document.createElement('input');
+percsizeInput.type = 'number';
+percsizeInput.min = '1';
+percsizeInput.max = '99'; // Limita il numero massimo a 99
+percsizeInput.value = '14';
+percsizeInput.size = '6'; // Limita l'input a due cifre
+percsizeInput.style.padding = '5px';
+percsizeInput.style.boxSizing = 'border-box';
+percsizeInput.addEventListener('input', (e) => {
+    let orcsize = 0;
+    orcsize = e.target.value ? parseInt(e.target.value, 10) : Infinity;
+    ocrUpdatesize(orcsize);
+});
+ocrsizeContainer.appendChild(percsizeInput);
+
+const percsizeLabel2 = document.createElement('label');
+percsizeLabel2.textContent = 'px';
+ocrsizeContainer.appendChild(percsizeLabel2);
+
+// Creazione del menu a tendina (select)
+const colorSelect = document.createElement('select');
+colorSelect.style.display = 'none';
+const colors = ['yellow', 'red', 'green', 'blue', 'pink', 'orange'];
+colors.forEach(color => {
+    const option = document.createElement('option');
+    option.value = color;
+    option.textContent = color;
+    colorSelect.appendChild(option);
+});
+colorSelect.addEventListener('change', function () {
+    selectedColor = colorSelect.value; // Colore selezionato
+    ocrUpdatecolor(selectedColor);
+});
+fleetInputContainer.appendChild(colorSelect);
+
+const distanceInputContainer = document.createElement('div');
+distanceInputContainer.style.display = 'flex';
+distanceInputContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
+distanceInputContainer.style.margin = '5px'; // Spazio sopra l'etichetta
+distanceInputContainer.style.marginBottom = '10px';
+//distanceInputContainer.style.border = '1px solid black'; // Aggiungi questa linea
+inputContainer.appendChild(distanceInputContainer);
+
+    const distanceInputLabel = document.createElement('label');
+    distanceInputLabel.textContent = 'move by:';
+    distanceInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+    distanceInputContainer.appendChild(distanceInputLabel);
+
+    const distanceInput1 = document.createElement('input');
+    distanceInput1.type = 'number';
+    distanceInput1.min = '1';
+    distanceInput1.max = '99'; // Limita il numero massimo a 99
+    distanceInput1.value = '5';
+    distanceInput1.size = '6'; // Limita l'input a due cifre
+    distanceInput1.style.padding = '5px';
+    distanceInput1.style.boxSizing = 'border-box';
+    distanceInput1.addEventListener('input', (e) => {
+        maxDistance1 = e.target.value ? parseInt(e.target.value, 10) : Infinity;
+        updateTable(data);
+    });
+    distanceInputContainer.appendChild(distanceInput1);
 
 
-        const closeButton = document.createElement('button');
-        closeButton.textContent = 'X';
-        closeButton.style.position = 'absolute';
-        closeButton.style.top = '5px';
-        closeButton.style.right = '5px';
-        closeButton.style.backgroundColor = 'red';
-        closeButton.style.color = 'white';
-        closeButton.style.border = 'none';
-        closeButton.style.borderRadius = '50%';
-        closeButton.style.width = '25px';
-        closeButton.style.height = '25px';
-        closeButton.style.cursor = 'pointer';
 
-        closeButton.onclick = function () {
-            container.remove(); // Rimuove il div dal DOM
-        };
-
-        container.appendChild(closeButton);
-
-        const headerContainer = document.createElement('div');
-        headerContainer.style.marginBottom = '10px';
-        container.appendChild(headerContainer);
-
-            // Aggiungere l'icona (puoi usare un'icona font o un'immagine)
-            const icon = document.createElement('img');
-            icon.src = 'https://play.staratlas.com/icon-small.png'; // Usa il tuo URL o icona
-            icon.alt = 'Icona';
-            icon.style.marginRight = '10px'; // Distanza tra icona e testo
-            headerContainer.appendChild(icon);
-
-            // Aggiungere il titolo
-            const title = document.createElement('span');
-            title.textContent = titolo;
-            title.style.fontSize = '20px';
-            title.style.fontWeight = 'bold';
-            headerContainer.appendChild(title);
+    const percResultLabel = document.createElement('label');
+    percResultLabel.textContent = '-';
+    percResultLabel.style.fontSize = '14px'; // Modifica la dimensione del font
+    percResultLabel.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
+    percResultLabel.style.fontWeight = 'bold'; // Testo in grassetto
+    percResultLabel.style.margin = '6px';
+    percResultLabel.style.width = 'auto';
+    distanceInputContainer.appendChild(percResultLabel);
 
 
-        const currentPosition = document.createElement('div');
-        currentPosition.textContent = 'Posizione attuale: N/A';
-        currentPosition.style.marginBottom = '10px';
-        container.appendChild(currentPosition);
 
-        const inputContainer = document.createElement('div');
-        inputContainer.style.display = 'flex';
-        inputContainer.style.marginBottom = '10px';
-        container.appendChild(inputContainer);
+    const coeffResultLabel = document.createElement('label');
+    coeffResultLabel.textContent = '-';
+    coeffResultLabel.style.fontSize = '14px'; // Modifica la dimensione del font
+    coeffResultLabel.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
+    coeffResultLabel.style.fontWeight = 'bold'; // Testo in grassetto
+    coeffResultLabel.style.margin = '6px';
+    coeffResultLabel.style.width = 'auto';
+    distanceInputContainer.appendChild(coeffResultLabel);
 
-            const fleetInputContainer = document.createElement('div');
-            fleetInputContainer.style.display = 'flex';
-            fleetInputContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
-            fleetInputContainer.style.marginBottom = '10px';
-            inputContainer.appendChild(fleetInputContainer);
 
-                const fleetInputLabel = document.createElement('label');
-                fleetInputLabel.textContent = 'Nome Flotta: ';
-                fleetInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
-                fleetInputContainer.appendChild(fleetInputLabel);
 
-                const fleetInput = document.createElement('input');
-                fleetInput.type = 'text';
-                fleetInput.value = fleetName;
-                fleetInput.size = '15'
-                fleetInput.style.padding = '5px';
-                fleetInput.style.boxSizing = 'border-box';
-                fleetInput.addEventListener('input', (e) => {
-                    fleetName = e.target.value;
+    const coeffCoordTxt = document.createElement('input');
+    coeffCoordTxt.type = 'text';
+    coeffCoordTxt.name = 'coeffCoordTxt';
+    coeffCoordTxt.size = '5';
+    coeffCoordTxt.style.margin = '4px';
+    coeffCoordTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    distanceInputContainer.appendChild(coeffCoordTxt);
+
+    const percCoordContainer = document.createElement('div');
+    percCoordContainer.style.display = 'flex';
+    percCoordContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
+    percCoordContainer.style.margin = '5px'; // Spazio sopra l'etichetta
+    percCoordContainer.style.marginBottom = '10px';
+    //percCoordContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    inputContainer.appendChild(percCoordContainer);
+
+            const probContainer = document.createElement('div');
+            probContainer.style.display = 'flex';
+            probContainer.style.margin = '5px';
+            //probContainer.style.border = '1px solid black'; // Aggiungi questa linea
+            percCoordContainer.appendChild(probContainer);
+
+                const sortProbLabel = document.createElement('label');
+                sortProbLabel.textContent = 'sort %';
+                probContainer.appendChild(sortProbLabel);
+
+                const sortProbRadio = document.createElement('input');
+                sortProbRadio.type = 'radio';
+                sortProbRadio.name = 'sortOption';
+                sortProbRadio.value = 'prob';
+                sortProbRadio.checked = true;
+                probContainer.appendChild(sortProbRadio);
+
+            const DistanceContainer = document.createElement('div');
+            DistanceContainer.style.display = 'flex';
+            DistanceContainer.style.margin = '5px';
+            //DistanceContainer.style.border = '1px solid black'; // Aggiungi questa linea
+            percCoordContainer.appendChild(DistanceContainer);
+
+                const sortDistanceLabel = document.createElement('label');
+                sortDistanceLabel.textContent = 'sort dist.';
+                DistanceContainer.appendChild(sortDistanceLabel);
+
+                const sortDistanceRadio = document.createElement('input');
+                sortDistanceRadio.type = 'radio';
+                sortDistanceRadio.name = 'sortOption';
+                sortDistanceRadio.value = 'distance';
+                DistanceContainer.appendChild(sortDistanceRadio);
+
+            const CoeffsortCointainer = document.createElement('div');
+            CoeffsortCointainer.style.display = 'flex';
+            CoeffsortCointainer.style.margin = '5px';
+            //CoeffsortCointainer.style.border = '1px solid black'; // Aggiungi questa linea
+            percCoordContainer.appendChild(CoeffsortCointainer);
+
+                const sortCoeffLabel = document.createElement('label');
+                sortCoeffLabel.textContent = 'sort coeff';
+                CoeffsortCointainer.appendChild(sortCoeffLabel);
+
+                const sortCoeffRadio = document.createElement('input');
+                sortCoeffRadio.type = 'radio';
+                sortCoeffRadio.name = 'sortOption';
+                sortCoeffRadio.value = 'distance';
+                CoeffsortCointainer.appendChild(sortCoeffRadio);
+
+
+                const IncidenzaCountLabel = document.createElement('label');
+                IncidenzaCountLabel.textContent = 'Inc. count';
+                percCoordContainer.appendChild(IncidenzaCountLabel);
+
+                const IncidenzaCountTxt = document.createElement('input');
+                IncidenzaCountTxt.name = 'IncidenzaCountTxt';
+                IncidenzaCountTxt.type = 'number';
+                IncidenzaCountTxt.min = '0.1';
+                IncidenzaCountTxt.max = '1'; // Limita il numero massimo a 99
+                IncidenzaCountTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
+                IncidenzaCountTxt.value = '0.3';
+                IncidenzaCountTxt.size = '2'; // Limita l'input a due cifre
+                IncidenzaCountTxt.style.padding = '5px';
+                IncidenzaCountTxt.addEventListener('input', (e) => {
+                    incidenza_count = e.target.value ? parseFloat(e.target.value) : Infinity;
                 });
-                fleetInputContainer.appendChild(fleetInput);
+                percCoordContainer.appendChild(IncidenzaCountTxt);
 
-                const ocrcheckContainer = document.createElement('div');
-                ocrcheckContainer.style.display = 'flex';
-                ocrcheckContainer.style.margin = '1px';
-                fleetInputContainer.appendChild(ocrcheckContainer);
+                const IncidenzaSduLabel = document.createElement('label');
+                IncidenzaSduLabel.textContent = 'Inc. sdu';
+                percCoordContainer.appendChild(IncidenzaSduLabel);
 
-                    const ocrLabel = document.createElement('label');
-                    ocrLabel.textContent = 'Ocr facilitator ';
-                    ocrcheckContainer.appendChild(ocrLabel);
+                const IncidenzaSduTxt = document.createElement('input');
+                IncidenzaSduTxt.name = 'IncidenzaSduTxt';
+                IncidenzaSduTxt.type = 'number';
+                IncidenzaSduTxt.min = '0.1';
+                IncidenzaSduTxt.max = '1'; // Limita il numero massimo a 99
+                IncidenzaSduTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
+                IncidenzaSduTxt.value = '0.7';
+                IncidenzaSduTxt.size = '2'; // Limita l'input a due cifre
+                IncidenzaSduTxt.style.padding = '5px';
+                IncidenzaSduTxt.addEventListener('input', (e) => {
+                    incidenza_sdu = e.target.value ? parseFloat(e.target.value) : Infinity;
+                });percCoordContainer.appendChild(IncidenzaSduTxt);
 
-                    const ocrcheckbox = document.createElement('input');
-                    ocrcheckbox.type = 'checkbox';
-                    ocrcheckbox.name = 'ocrenable';
-                    ocrcheckbox.checked = false;
-                    ocrcheckbox.addEventListener('change', function () {
-                        if (ocrcheckbox.checked) {
-                            ocrsizeContainer.style.visibility = 'visible';
-                            colorSelect.style.display = 'block';
-                        } else {
-                            ocrsizeContainer.style.visibility = 'hidden';
-                            colorSelect.style.display = 'none'; // Inizialmente nascosto
-                            ocrUpdatesize(14);
-                            selectedColor = 'yellow';
-                            ocrUpdatecolor(selectedColor);
-                        }
-                    });
-                    ocrcheckContainer.appendChild(ocrcheckbox);
+    const percLabelContainer = document.createElement('div');
+    percLabelContainer.style.display = 'flex';
+    percLabelContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
+    percLabelContainer.style.margin = '5px'; // Spazio sopra l'etichetta
+    percLabelContainer.style.marginBottom = '10px';
+    //percLabelContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    inputContainer.appendChild(percLabelContainer);
 
-                const ocrsizeContainer = document.createElement('div');
-                ocrsizeContainer.style.visibility = 'hidden';
-                ocrsizeContainer.style.display = 'center';
-                ocrsizeContainer.style.margin = '1px';
-                fleetInputContainer.appendChild(ocrsizeContainer);
+        const DistanceLimitLabel = document.createElement('label');
+        DistanceLimitLabel.textContent = 'Distance limit ';
+        percLabelContainer.appendChild(DistanceLimitLabel);
 
-                    const percsizeLabel = document.createElement('label');
-                    percsizeLabel.textContent = 'Size ';
-                    ocrsizeContainer.appendChild(percsizeLabel);
-
-                    const percsizeInput = document.createElement('input');
-                    percsizeInput.type = 'number';
-                    percsizeInput.min = '1';
-                    percsizeInput.max = '99'; // Limita il numero massimo a 99
-                    percsizeInput.value = '14';
-                    percsizeInput.size = '6'; // Limita l'input a due cifre
-                    percsizeInput.style.padding = '5px';
-                    percsizeInput.style.boxSizing = 'border-box';
-                    percsizeInput.addEventListener('input', (e) => {
-                        let orcsize = 0;
-                        orcsize = e.target.value ? parseInt(e.target.value, 10) : Infinity;
-                        ocrUpdatesize(orcsize);
-                    });
-                    ocrsizeContainer.appendChild(percsizeInput);
-
-                    const percsizeLabel2 = document.createElement('label');
-                    percsizeLabel2.textContent = 'px';
-                    ocrsizeContainer.appendChild(percsizeLabel2);
-
-                // Creazione del menu a tendina (select)
-                const colorSelect = document.createElement('select');
-                colorSelect.style.display = 'none';
-                const colors = ['yellow', 'red', 'green', 'blue', 'pink', 'orange'];
-                colors.forEach(color => {
-                    const option = document.createElement('option');
-                    option.value = color;
-                    option.textContent = color;
-                    colorSelect.appendChild(option);
-                });
-                colorSelect.addEventListener('change', function () {
-                    selectedColor = colorSelect.value; // Colore selezionato
-                    ocrUpdatecolor(selectedColor);
-                });
-                fleetInputContainer.appendChild(colorSelect);
-
-    const ResultContainer = document.createElement('div');
-    ResultContainer.style.display = 'flex';
-    ResultContainer.style.margin = '5px';
-    inputContainer.appendChild(ResultContainer);
-
-        const distanceInputContainer = document.createElement('div');
-        distanceInputContainer.style.display = 'flex';
-        distanceInputContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
-        distanceInputContainer.style.margin = '5px'; // Spazio sopra l'etichetta
-        distanceInputContainer.style.marginBottom = '10px';
-        ResultContainer.appendChild(distanceInputContainer);
-
-            const distanceInputLabel = document.createElement('label');
-            distanceInputLabel.textContent = 'Distanza Max: ';
-            distanceInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
-            distanceInputContainer.appendChild(distanceInputLabel);
-
-            const distanceInput1 = document.createElement('input');
-            distanceInput1.type = 'number';
-            distanceInput1.min = '1';
-            distanceInput1.max = '99'; // Limita il numero massimo a 99
-            distanceInput1.value = '5';
-            distanceInput1.size = '6'; // Limita l'input a due cifre
-            distanceInput1.style.padding = '5px';
-            distanceInput1.style.boxSizing = 'border-box';
-            distanceInput1.addEventListener('input', (e) => {
-                maxDistance1 = e.target.value ? parseInt(e.target.value, 10) : Infinity;
-                updateTable(currentData);
-            });
-            distanceInputContainer.appendChild(distanceInput1);
-
-            const distanceInput2 = document.createElement('input');
-            distanceInput2.type = 'number';
-            distanceInput2.min = '1';
-            distanceInput2.max = '99'; // Limita il numero massimo a 99
-            distanceInput2.value = '15';
-            distanceInput2.size = '6'; // Limita l'input a due cifre
-            distanceInput2.style.padding = '5px';
-            distanceInput2.style.boxSizing = 'border-box';
-            distanceInput2.addEventListener('input', (e) => {
-                maxDistance2 = e.target.value ? parseInt(e.target.value, 10) : Infinity;
-                updateTable(currentData);
-            });
-            distanceInputContainer.appendChild(distanceInput2);
-
-            const distanceInput3 = document.createElement('input');
-            distanceInput3.type = 'number';
-            distanceInput3.min = '1';
-            distanceInput3.max = '99'; // Limita il numero massimo a 99
-            distanceInput3.value = '30';
-            distanceInput3.size = '6'; // Limita l'input a due cifre
-            distanceInput3.style.padding = '5px';
-            distanceInput3.style.boxSizing = 'border-box';
-            distanceInput3.addEventListener('input', (e) => {
-                maxDistance3 = e.target.value ? parseInt(e.target.value, 10) : Infinity;
-                updateTable(currentData);
-            });
-            distanceInputContainer.appendChild(distanceInput3);
-
-        const percLabelContainer = document.createElement('div');
-        percLabelContainer.style.display = 'flex';
-        percLabelContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
-        percLabelContainer.style.margin = '5px'; // Spazio sopra l'etichetta
-        percLabelContainer.style.marginBottom = '10px';
-        ResultContainer.appendChild(percLabelContainer);
-
-            const percResultLabel = document.createElement('label');
-            percResultLabel.textContent = '%';
-            percResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
-            percLabelContainer.appendChild(percResultLabel);
-
-            const percentualeLabel1 = document.createElement('label');
-            percentualeLabel1.textContent = '-';
-            percentualeLabel1.style.fontSize = '14px'; // Modifica la dimensione del font
-            percentualeLabel1.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
-            percentualeLabel1.style.fontWeight = 'bold'; // Testo in grassetto
-            percentualeLabel1.style.margin = '6px';
-            percLabelContainer.appendChild(percentualeLabel1);
-
-            const percentualeLabel2 = document.createElement('label');
-            percentualeLabel2.textContent = '-';
-            percentualeLabel2.style.fontSize = '14px'; // Modifica la dimensione del font
-            percentualeLabel2.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
-            percentualeLabel2.style.fontWeight = 'bold'; // Testo in grassetto
-            percentualeLabel2.style.margin = '6px';
-            percLabelContainer.appendChild(percentualeLabel2);
-
-            const percentualeLabel3 = document.createElement('label');
-            percentualeLabel3.textContent = '-';
-            percentualeLabel3.style.fontSize = '14px'; // Modifica la dimensione del font
-            percentualeLabel3.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
-            percentualeLabel3.style.fontWeight = 'bold'; // Testo in grassetto
-            percentualeLabel3.style.margin = '6px';
-            percLabelContainer.appendChild(percentualeLabel3);
-
-        const percCoordContainer = document.createElement('div');
-        percCoordContainer.style.display = 'flex';
-        percCoordContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
-        percCoordContainer.style.margin = '5px'; // Spazio sopra l'etichetta
-        percCoordContainer.style.marginBottom = '10px';
-        ResultContainer.appendChild(percCoordContainer);
-
-            const coordResultLabel = document.createElement('label');
-            coordResultLabel.textContent = 'Coords';
-            coordResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
-            percCoordContainer.appendChild(coordResultLabel);
-
-            const percCoordTxt1 = document.createElement('input');
-            percCoordTxt1.type = 'text';
-            percCoordTxt1.name = 'percCoordTxt1';
-            percCoordTxt1.size = '5';
-            percCoordTxt1.style.margin = '4px';
-            percCoordTxt1.style.width = '50px'; // Imposta una larghezza specifica in pixel
-            percCoordContainer.appendChild(percCoordTxt1);
-
-            const percCoordTxt2 = document.createElement('input');
-            percCoordTxt2.type = 'text';
-            percCoordTxt2.name = 'percCoordTxt2';
-            percCoordTxt2.size = '5';
-            percCoordTxt2.style.margin = '4px';
-            percCoordTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
-            percCoordContainer.appendChild(percCoordTxt2);
-
-            const percCoordTxt3 = document.createElement('input');
-            percCoordTxt3.type = 'text';
-            percCoordTxt3.name = 'percCoordTxt3';
-            percCoordTxt3.size = '5';
-            percCoordTxt3.style.margin = '4px';
-            percCoordTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
-            percCoordContainer.appendChild(percCoordTxt3);
-
-
-    const sortContainer = document.createElement('div');
-    sortContainer.style.display = 'flex';
-    sortContainer.style.flexDirection = 'column';
-    sortContainer.style.margin = '5px';
-    inputContainer.appendChild(sortContainer);
-
-        const probContainer = document.createElement('div');
-        probContainer.style.display = 'flex';
-        probContainer.style.margin = '5px';
-        sortContainer.appendChild(probContainer);
-
-            const sortProbLabel = document.createElement('label');
-            sortProbLabel.textContent = 'Ordina per %';
-            probContainer.appendChild(sortProbLabel);
-
-            const sortProbRadio = document.createElement('input');
-            sortProbRadio.type = 'radio';
-            sortProbRadio.name = 'sortOption';
-            sortProbRadio.value = 'prob';
-            sortProbRadio.checked = true;
-            probContainer.appendChild(sortProbRadio);
-
-        const DistanceContainer = document.createElement('div');
-        DistanceContainer.style.display = 'flex';
-        DistanceContainer.style.margin = '5px';
-        sortContainer.appendChild(DistanceContainer);
-
-            const sortDistanceLabel = document.createElement('label');
-            sortDistanceLabel.textContent = 'Ordina per Distanza';
-            DistanceContainer.appendChild(sortDistanceLabel);
-
-            const sortDistanceRadio = document.createElement('input');
-            sortDistanceRadio.type = 'radio';
-            sortDistanceRadio.name = 'sortOption';
-            sortDistanceRadio.value = 'distance';
-            DistanceContainer.appendChild(sortDistanceRadio);
+        const DistanceLimitcheckbox = document.createElement('input');
+        DistanceLimitcheckbox.type = 'checkbox';
+        DistanceLimitcheckbox.name = 'distancelimitenable';
+        DistanceLimitcheckbox.checked = false;
+        DistanceLimitcheckbox.addEventListener('change', function () {
+            if (DistanceLimitcheckbox.checked) {
+                DistanceLimitContainer.style.display = 'flex';
+            } else {
+                DistanceLimitContainer.style.display = 'none'; // Inizialmente nascosto
+            }
+        });
+        percLabelContainer.appendChild(DistanceLimitcheckbox);
 
         const DistanceLimitContainer = document.createElement('div');
-        DistanceLimitContainer.style.display = 'flex';
+        DistanceLimitContainer.style.display = 'none';
         DistanceLimitContainer.style.flexDirection = 'column';
         DistanceLimitContainer.style.margin = '5px';
-        sortContainer.appendChild(DistanceLimitContainer);
+        //DistanceLimitContainer.style.border = '1px solid black'; // Aggiungi questa linea
+        percLabelContainer.appendChild(DistanceLimitContainer);
 
-        const DistanceLimitContainer2 = document.createElement('div');
-        DistanceLimitContainer2.style.display = 'flex';
-        DistanceLimitContainer.appendChild(DistanceLimitContainer2);
-
-            const DistanceLimitLabel = document.createElement('label');
-            DistanceLimitLabel.textContent = 'Distance limit ';
-            DistanceLimitContainer2.appendChild(DistanceLimitLabel);
-
-            const DistanceLimitcheckbox = document.createElement('input');
-            DistanceLimitcheckbox.type = 'checkbox';
-            DistanceLimitcheckbox.name = 'distancelimitenable';
-            DistanceLimitcheckbox.checked = false;
-            DistanceLimitcheckbox.addEventListener('change', function () {
-                if (DistanceLimitcheckbox.checked) {
-                    DistanceLimitContainer3.style.display = 'flex';
-                } else {
-                    DistanceLimitContainer3.style.display = 'none'; // Inizialmente nascosto
-                }
-            });
-            DistanceLimitContainer2.appendChild(DistanceLimitcheckbox);
-
-        const DistanceLimitContainer3 = document.createElement('div');
-        DistanceLimitContainer3.style.display = 'none';
-        DistanceLimitContainer3.style.visibility = 'none';
-        DistanceLimitContainer3.style.flexDirection = 'column';
-        DistanceLimitContainer.appendChild(DistanceLimitContainer3);
+            const fuelTxt = document.createElement('input');
+            fuelTxt.type = 'text';
+            fuelTxt.name = 'fuelTxt';
+            fuelTxt.size = '7';
+            fuelTxt.style.margin = '4px';
+            fuelTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+            DistanceLimitContainer.appendChild(fuelTxt);
 
             const SBcoordsTxt = document.createElement('input');
             SBcoordsTxt.type = 'text';
             SBcoordsTxt.name = 'SBcoordsTxt';
             SBcoordsTxt.size = '5';
-            SBcoordsTxt.value = '0,0';
+            SBcoordsTxt.value = '11,-16';
             SBcoordsTxt.style.margin = '4px';
             SBcoordsTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-            DistanceLimitContainer3.appendChild(SBcoordsTxt);
+            DistanceLimitContainer.appendChild(SBcoordsTxt);
 
             const maxDistancefromSBTxt = document.createElement('input');
             maxDistancefromSBTxt.type = 'text';
@@ -428,7 +442,7 @@
             maxDistancefromSBTxt.value = '20';
             maxDistancefromSBTxt.style.margin = '4px';
             maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-            DistanceLimitContainer3.appendChild(maxDistancefromSBTxt);
+            DistanceLimitContainer.appendChild(maxDistancefromSBTxt);
 
     const button = document.createElement('button');
     button.textContent = 'Avvia Scansione Automatica';
@@ -444,6 +458,7 @@
     const tablecontainer = document.createElement('div');
     tablecontainer.style.maxHeight = '300px';
     tablecontainer.style.overflowY = 'auto';
+    //tablecontainer.style.border = '1px solid black'; // Aggiungi questa linea
     container.appendChild(tablecontainer);
 
         const table = document.createElement('table');
@@ -453,13 +468,10 @@
         table.style.marginBottom = '10px';
         tablecontainer.appendChild(table);
 
-            const headerRow = document.createElement('tr');
-            headerRow.innerHTML = '<th style="border-bottom: 1px solid #ccc;">Prob (%)</th><th style="border-bottom: 1px solid #ccc;">Coordinate (X,Y)</th><th style="border-bottom: 1px solid #ccc;">Distanza</th>';
-            table.appendChild(headerRow);
-
     const byebyecontainer = document.createElement('div');
     byebyecontainer.style.border = 'solid';
     byebyecontainer.style.borderColor = 'gray';
+    //byebyecontainer.style.border = '1px solid black'; // Aggiungi questa linea
     container.appendChild(byebyecontainer);
 
         const byebye = document.createElement('label');
@@ -468,10 +480,12 @@
         byebyecontainer.appendChild(byebye);
 
 
+
+
+
     button.addEventListener('click', toggleScan);
 
     let intervalId = null;
-    let currentData = [];
 
     function toggleScan() {
         if (intervalId) {
@@ -485,10 +499,12 @@
         }
     }
 
-    function calculateDistance(x1, y1, x2, y2) {
-        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-    }
 
+
+    //<rect width="1" height="1" x="-1.5" y="45.5" fill="rgb(61, 107, 200)" count="2" prob="8" sdu="0" time="2025-01-27 22:02:48" stroke="transparent" stroke-opacity="1" stroke-width="0.025" style="fill-opacity: 0.35;" id="sector_sdu_-1_5" class="sector_sdu"></rect>
+    //<text dx="-1" dy="46.11" fill="#000" fill-opacity="1" text-anchor="middle" style="font-size: 0.34px;" id="sector_sdu_txt_-1_5" class="sector_sdu_txt">8%</text>
+
+    // Funzione per aggiornare la tabella con i dati
     function scanData() {
         updateFleetPosition();
         const elements = document.querySelectorAll('.sector_sdu_txt');
@@ -496,11 +512,24 @@
 
         elements.forEach(el => {
             const prob = el.textContent.trim();
+
             // Filtra gli elementi con prob validi (non 0% e non vuoti)
             if (prob !== '0%' && prob !== '') {
                 const idParts = el.id.split('_');
                 const x = parseFloat(idParts[idParts.length - 2]);
                 const y = parseFloat(idParts[idParts.length - 1]);
+
+                // Trova l'elemento <rect> corrispondente
+                const rectId = `sector_sdu_${x}_${y}`;
+                const rectElement = document.getElementById(rectId);
+
+                // Estrai i parametri dall'elemento <rect>
+                const count = rectElement?.getAttribute('count') || 'N/A';
+                const sdu = rectElement?.getAttribute('sdu') || 'N/A';
+                const time = rectElement?.getAttribute('time') || 'N/A';
+
+                // Estrai solo l'orario da "time" (escludi la data)
+                const timeOnly = time.split(' ')[1] || 'N/A';
                 if (DistanceLimitcheckbox.checked) {
                     const starbaseInput = SBcoordsTxt.value.trim();
                     const coords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
@@ -515,31 +544,50 @@
                     const distanceFromStarbase = calculateDistance(starbaseX, starbaseY, x, y);
                     if (distanceFromStarbase > maxDistance) return; // Esclude i settori troppo lontani
                 }
+                // Aggiungi i dati al dataset
                 const distance = calculateDistance(currentX, currentY, x, y);
-                data.push({ prob, x, y, distance });
+                const coeff = calculateCoeff(prob, count, sdu);
+                data.push({ coeff, prob, x, y, distance, count, sdu, time: timeOnly });
             }
         });
 
-        currentData = data;
-        table.innerHTML = '<tr><th style="border-bottom: 1px solid #ccc;">Prob (%)</th><th style="border-bottom: 1px solid #ccc;">Coordinate (X,Y)</th><th style="border-bottom: 1px solid #ccc;">Distanza</th></tr>';
+        //currentData = data;
+
+        // Aggiorna l'intestazione della tabella con le nuove colonne
+        table.innerHTML = `
+			<tr>
+                <th style="border-bottom: 1px solid #ccc;">Coeff</th>
+				<th style="border-bottom: 1px solid #ccc;">Prob (%)</th>
+				<th style="border-bottom: 1px solid #ccc;">Count</th>
+				<th style="border-bottom: 1px solid #ccc;">SDU</th>
+                <th style="border-bottom: 1px solid #ccc;">Distanza</th>
+                <th style="border-bottom: 1px solid #ccc;">Coords</th>
+				<th style="border-bottom: 1px solid #ccc;">Time</th>
+			</tr>
+		`;
+
         if (sortProbRadio.checked) {
-            currentData.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
-            updateTable(currentData);
+            data.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
+            updateTable(data);
+        } else if (sortDistanceRadio.checked) {
+            data.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+            updateTable(data);
         } else {
-            currentData.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-            updateTable(currentData);
+            data.sort((a, b) => parseFloat(b.coeff) - parseFloat(a.coeff));
+            updateTable(data);
         }
     }
 
-    function trovapercentuale(data, maxDistance, percentualeLabel, percCoordTxt) {
+
+    function trovapercentuale(data, maxDistance, percResultLabel, coeffResultLabel, percCoordTxt) {
         let maxProbInRange = -1;
         let closestToMaxProb = null;
 
         // Prima, troviamo la probabilità massima nel range
         data.forEach(item => {
             if (item.distance <= maxDistance) {
-                if (parseFloat(item.prob) > maxProbInRange) {
-                    maxProbInRange = parseFloat(item.prob);
+                if (parseFloat(item.coeff) > maxProbInRange) {
+                    maxProbInRange = parseFloat(item.coeff);
                 }
             }
         });
@@ -547,11 +595,12 @@
         // Ora, tra le righe con la probabilità massima, troviamo la più vicina
         let minDistance = Infinity;
         data.forEach(item => {
-            if (item.distance <= maxDistance && parseFloat(item.prob) === maxProbInRange) {
+            if (item.distance <= maxDistance && parseFloat(item.coeff) === maxProbInRange) {
                 if (item.distance < minDistance) {
                     minDistance = item.distance;
                     closestToMaxProb = item; // Memorizziamo la riga con la probabilità massima e la distanza minima
-                    percentualeLabel.textContent = item.prob;
+                    percResultLabel.textContent = parseFloat(item.prob).toString() + '%';
+                    coeffResultLabel.textContent = parseFloat(item.coeff).toFixed(1).toString();
                     percCoordTxt.value = item.x + ',' + item.y; // Aggiorniamo il campo di input con le coordinate
                 }
             }
@@ -561,31 +610,37 @@
 
     function updateTable(data) {
 
-        let closestToMaxProb1 = trovapercentuale(data, maxDistance1, percentualeLabel1, percCoordTxt1);
-        let closestToMaxProb2 = trovapercentuale(data, maxDistance2, percentualeLabel2, percCoordTxt2);
-        let closestToMaxProb3 = trovapercentuale(data, maxDistance3, percentualeLabel3, percCoordTxt3);
+        let closestToMaxCoeFF = trovapercentuale(data, maxDistance1, percResultLabel, coeffResultLabel, coeffCoordTxt);
 
         // Creiamo la tabella e evidenziamo la riga più vicina
         data.slice(0, 500).forEach(item => {
-
             const row = document.createElement('tr');
-            row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${item.prob}</td>
+            row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${item.coeff.toFixed(1)}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.prob}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.count}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.sdu}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.distance}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.x},${item.y}</td>
-                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.distance}</td>`;
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.time}</td>`;
 
-            if (item === closestToMaxProb1 || item === closestToMaxProb2 || item === closestToMaxProb3) {
+            if (item === closestToMaxCoeFF) {
                 row.style.backgroundColor = selectedColor; // Evidenziamo solo la riga più vicina
             }
             table.appendChild(row);
         });
 
     }
-
+    function calculateCoeff(prob, count, sdu) {
+        return (parseFloat(prob) / ( (parseFloat(count)*incidenza_count)) /((parseFloat(sdu)*incidenza_sdu)+1) )
+    }
     function calculateDistance(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
     }
 
+
+
     function updateFleetPosition() {
+
         const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${fleetName}"]`);
         if (fleetRow) {
             const stateRow = fleetRow.closest('tr').nextElementSibling;
@@ -608,36 +663,68 @@
                         .replace(/\s+/g, ' ') // Rimuove spazi multipli
                         .trim();
                     currentPosition.textContent = `${scenarioDescription.replace('|', ',')}`;
+                    currentPosition.style.backgroundColor = 'green';
                 } else {
                     // Nessuna coordinata trovata
                     currentPosition.textContent = 'Posizione attuale: N/A';
+                    currentPosition.style.backgroundColor = 'red';
                 }
             } else {
                 currentPosition.textContent = 'Posizione attuale: N/A';
+                currentPosition.style.backgroundColor = 'red';
             }
         } else {
             currentPosition.textContent = 'Posizione attuale: N/A';
+            currentPosition.style.backgroundColor = 'red';
+        }
+        // Seleziona l'elemento che contiene il titolo
+        let fuelBarElement = document.getElementById("fleet_selected_fuel_bar");
+
+        // Controlla se l'attributo title esiste
+        if (fuelBarElement && fuelBarElement.firstElementChild) {
+            let titleText = fuelBarElement.firstElementChild.getAttribute("title");
+
+            // Trova la percentuale usando una regex
+            let match = titleText.match(/\((\d+)%\)/);
+
+            if (match) {
+                fuel = match[1]; // Estrai solo il numero
+
+                // Inserisci la percentuale in un elemento con id "fuelPercentageDisplay"
+                fuelTxt.value = fuel + "%";
+                maxDistancefromSBTxt.value = Math.min(11 + Math.floor(fuel / 5) * 2, 20);
+
+            }
+        }
+
+        // Seleziona l'elemento con l'id "fleet_selected_cargo"
+        let cargoElement = document.getElementById("fleet_selected_cargo");
+
+        if (cargoElement) {
+            let cargoText = cargoElement.innerHTML;
+
+            // Estrarre la percentuale tra parentesi (es. 93%)
+            let percentageMatch = cargoText.match(/\((\d+)%\)/);
+
+            // Estrarre il numero prima di "Food" (es. 31124)
+            let foodMatch = cargoText.match(/([\d,.]+)\s*<span style="color:#08f414">Food<\/span>/);
+            foodValue = foodMatch ? foodMatch[1] : "N/A";
+
+            //foodTxt.value = foodValue;
+
         }
     }
 
     function ocrUpdatesize(size) {
         let sizestr = String(size) + 'px';
-        percentualeLabel1.style.fontSize = sizestr; // Modifica la dimensione del font
-        percentualeLabel2.style.fontSize = sizestr; // Modifica la dimensione del font
-        percentualeLabel3.style.fontSize = sizestr; // Modifica la dimensione del font
-        percCoordTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
-        percCoordTxt2.style.fontSize = sizestr; // Modifica la dimensione del font 
-        percCoordTxt3.style.fontSize = sizestr; // Modifica la dimensione del font
+        coeffResultLabel.style.fontSize = sizestr; // Modifica la dimensione del font
+        coeffCoordTxt.style.fontSize = sizestr; // Modifica la dimensione del font
         let sizeelement = String(50 + 3 * (size - 13)) + 'px';
-        percCoordTxt1.style.width = sizeelement;
-        percCoordTxt2.style.width = sizeelement;
-        percCoordTxt3.style.width = sizeelement;
+        coeffCoordTxt.style.width = sizeelement;
     }
 
     function ocrUpdatecolor(color) {
-        percentualeLabel1.style.backgroundColor = color; // Colore di sfondo giallo
-        percentualeLabel2.style.backgroundColor = color; // Colore di sfondo giallo
-        percentualeLabel3.style.backgroundColor = color; // Colore di sfondo giallo
+        coeffResultLabel.style.backgroundColor = color; // Colore di sfondo giallo
     }
 
 })();
