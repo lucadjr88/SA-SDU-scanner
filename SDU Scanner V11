@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V10.3
+// @name         SDU Scanner V11
 // @namespace    http://tampermonkey.net/
-// @version      10.3
+// @version      11
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,7 +10,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V10.3 by lucadjr';
+    let titolo = 'SDU Scanner V11 by lucadjr';
     let currentX = 0, currentY = 0;
     let fleetName = 'My Fleet';
     let maxDistance1 = 5;
@@ -282,13 +282,33 @@
 
 
 
-    const coeffCoordTxt = document.createElement('input');
-    coeffCoordTxt.type = 'text';
-    coeffCoordTxt.name = 'coeffCoordTxt';
-    coeffCoordTxt.size = '5';
-    coeffCoordTxt.style.margin = '4px';
-    coeffCoordTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    distanceInputContainer.appendChild(coeffCoordTxt);
+    const percCoordTxt = document.createElement('input');
+    percCoordTxt.type = 'text';
+    percCoordTxt.name = 'percCoordTxt';
+    percCoordTxt.size = '5';
+    percCoordTxt.style.margin = '4px';
+    percCoordTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    distanceInputContainer.appendChild(percCoordTxt);
+
+    const cordRippre = document.createElement('div');
+    cordRippre.style.display = 'flex';
+    distanceInputContainer.appendChild(cordRippre);
+
+    const percCoordxTxt = document.createElement('input');
+    percCoordxTxt.type = 'text';
+    percCoordxTxt.name = 'percCoordxTxt';
+    percCoordxTxt.size = '2';
+    percCoordxTxt.style.margin = '4px';
+    percCoordxTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    cordRippre.appendChild(percCoordxTxt);
+
+    const percCoordyTxt = document.createElement('input');
+    percCoordyTxt.type = 'text';
+    percCoordyTxt.name = 'percCoordyTxt';
+    percCoordyTxt.size = '2';
+    percCoordyTxt.style.margin = '4px';
+    percCoordyTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    cordRippre.appendChild(percCoordyTxt);
 
     const percCoordContainer = document.createElement('div');
     percCoordContainer.style.display = 'flex';
@@ -658,7 +678,7 @@
                 }
 
                 bestCell = closestCell;  // Aggiorna bestCell per restituire la cella più vicina
-                
+
             } else {
                 bestCell = { x: bestArea.x, y: bestArea.y, coeff: 0, avgProb: bestArea.avgProb, distanceToCurrent: 0 };
             }
@@ -712,13 +732,15 @@
                     percResultLabel.textContent = parseFloat(item.prob).toString() + '%';
                     coeffResultLabel.textContent = parseFloat(item.coeff).toFixed(1).toString();
                     percCoordTxt.value = item.x + ',' + item.y; // Aggiorniamo il campo di input con le coordinate
+                    percCoordxTxt.value = item.x;
+                    percCoordyTxt.value =  item.y; // Aggiorniamo il campo di input con le coordinate
                 }
             }
         });
         return closestToMaxProb;
     }
     function updateTable(data) {
-        let closestToMaxCoeFF = trovapercentuale(data, maxDistance1, percResultLabel, coeffResultLabel, coeffCoordTxt);
+        let closestToMaxCoeFF = trovapercentuale(data, maxDistance1, percResultLabel, coeffResultLabel, percCoordTxt);
         // Creiamo la tabella e evidenziamo la riga più vicina
         data.forEach(item => {
             const row = document.createElement('tr');
@@ -809,9 +831,11 @@
     function ocrUpdatesize(size) {
         let sizestr = String(size) + 'px';
         coeffResultLabel.style.fontSize = sizestr; // Modifica la dimensione del font
-        coeffCoordTxt.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordTxt.style.fontSize = sizestr; // Modifica la dimensione del font
         let sizeelement = String(50 + 3 * (size - 13)) + 'px';
-        coeffCoordTxt.style.width = sizeelement;
+        percCoordTxt.style.width = sizeelement;
+        percCoordxTxt.style.width = sizeelement;
+        percCoordyTxt.style.width = sizeelement;
     }
     function ocrUpdatecolor(color) {
         coeffResultLabel.style.backgroundColor = color; // Colore di sfondo giallo
