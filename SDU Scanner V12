@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V11
+// @name         SDU Scanner V12
 // @namespace    http://tampermonkey.net/
-// @version      11
+// @version      12
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,7 +10,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V11 by lucadjr';
+    let titolo = 'SDU Scanner V12 by lucadjr';
     let currentX = 0, currentY = 0;
     let fleetName = 'My Fleet';
     let maxDistance1 = 5;
@@ -523,18 +523,35 @@
     byebyecontainer.appendChild(byebye);
     button.addEventListener('click', toggleScan);
 
-    let intervalId = null;
+    // Funzione per simulare il clic sul pulsante
+    function simulateButtonClick() {
+        if (typeof characterID !== 'undefined' && characterID != 0) {
+            sa_getUserData(characterID);
+        } else {
+            toggleChars('on');
+        }
+    }
+
+    // Esegui la funzione ogni 20 secondi (20000 millisecondi)
+    setInterval(simulateButtonClick, 20000);
+
     function toggleScan() {
         if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
             button.textContent = 'Avvia Scansione Automatica';
+            button.style.backgroundColor = 'green';
         } else {
-            scanData();
             intervalId = setInterval(scanData, 2000);
             button.textContent = 'Arresta Scansione Automatica';
+            button.style.backgroundColor = 'red';
         }
     }
+    
+    // Esegui la scansione automatica ogni 2 secondi (2000 millisecondi)
+    let intervalId = null;
+    button.addEventListener('click', toggleScan);
+
     function scanData() {
         updateFleetPosition();
         const elements = document.querySelectorAll('.sector_sdu_txt');
