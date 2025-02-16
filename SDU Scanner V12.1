@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V12
+// @name         SDU Scanner V12.1
 // @namespace    http://tampermonkey.net/
-// @version      12
+// @version      12.1
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,15 +10,17 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V12 by lucadjr';
+    let titolo = 'SDU Scanner V12.1 by lucadjr';
     let currentX = 0, currentY = 0;
     let fleetName = 'My Fleet';
-    let maxDistance1 = 5;
+    let maxdistanceFromFleet = 5;
     let selectedColor = 'yellow';
     let fuel = 0;
     let foodValue = 0;
     let incidenza_sdu = 0.7;
     let incidenza_count = 0.3;
+    let maxdistanceFromSB = 100; //limite default
+    let maxDistancefromSB_valore_iniziale = 55;
 
     function makeDraggable(el) {
         el.style.position = 'absolute';
@@ -144,18 +146,71 @@
 
     const percLabel = document.createElement('label');
     percLabel.textContent = '%';
-    percLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+    percLabel.style.margin = '7px'; // Spazio sotto l'etichetta
     fleetInputContainer.appendChild(percLabel);
-
-    const coeffLabel = document.createElement('label');
-    coeffLabel.textContent = 'Coeff';
-    coeffLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
-    fleetInputContainer.appendChild(coeffLabel);
 
     const coordResultLabel = document.createElement('label');
     coordResultLabel.textContent = 'Coords';
-    coordResultLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+    coordResultLabel.style.margin = '7px'; // Spazio sotto l'etichetta
     fleetInputContainer.appendChild(coordResultLabel);
+
+    const divlimitcontainer = document.createElement('div');
+    divlimitcontainer.style.display = 'flex';
+    fleetInputContainer.appendChild(divlimitcontainer);
+
+    const DistanceLimitLabel = document.createElement('label');
+    DistanceLimitLabel.textContent = 'Distance limit ';
+    divlimitcontainer.appendChild(DistanceLimitLabel);
+
+    const DistanceLimitcheckbox = document.createElement('input');
+    DistanceLimitcheckbox.type = 'checkbox';
+    DistanceLimitcheckbox.name = 'distancelimitenable';
+    DistanceLimitcheckbox.checked = false;
+    DistanceLimitcheckbox.addEventListener('change', function () {
+        if (DistanceLimitcheckbox.checked) {
+            DistanceLimitContainer.style.display = 'flex';
+        } else {
+            DistanceLimitContainer.style.display = 'none'; // Inizialmente nascosto
+        }
+    });
+    divlimitcontainer.appendChild(DistanceLimitcheckbox);
+
+    const DistanceLimitContainer = document.createElement('div');
+    DistanceLimitContainer.style.display = 'none';
+    DistanceLimitContainer.style.flexDirection = 'column';
+    DistanceLimitContainer.style.margin = '5px';
+    //DistanceLimitContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    fleetInputContainer.appendChild(DistanceLimitContainer);
+
+    const maxDistancefromSBTxt = document.createElement('input');
+    maxDistancefromSBTxt.type = 'number';
+    maxDistancefromSBTxt.name = 'maxDistancefromSBTxt';
+    maxDistancefromSBTxt.size = '5';
+    maxDistancefromSBTxt.value = '100';
+    maxDistancefromSBTxt.style.margin = '4px';
+    maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    maxDistancefromSBTxt.addEventListener('input', (e) => {
+        maxDistancefromSB_valore_iniziale = e.target.value ? parseInt(e.target.value, 10) : maxDistancefromSB_valore_iniziale;});
+    DistanceLimitContainer.appendChild(maxDistancefromSBTxt);
+
+    const SBcoordsTxt = document.createElement('input');
+    SBcoordsTxt.type = 'text';
+    SBcoordsTxt.value = 'SBcoordsTxt';
+    SBcoordsTxt.name = 'SBcoordsTxt';
+    SBcoordsTxt.size = '5';
+    SBcoordsTxt.value = '11,-16';
+    SBcoordsTxt.style.margin = '4px';
+    SBcoordsTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    DistanceLimitContainer.appendChild(SBcoordsTxt);
+
+    const fuelTxt = document.createElement('input');
+    fuelTxt.type = 'text';
+    fuelTxt.value = 'fuelTxt';
+    fuelTxt.name = 'fuelTxt';
+    fuelTxt.size = '7';
+    fuelTxt.style.margin = '4px';
+    fuelTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    DistanceLimitContainer.appendChild(fuelTxt);
 
     const ocrcheckContainer = document.createElement('div');
     ocrcheckContainer.style.display = 'flex';
@@ -244,71 +299,95 @@
     distanceInputLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
     distanceInputContainer.appendChild(distanceInputLabel);
 
-    const distanceInput1 = document.createElement('input');
-    distanceInput1.type = 'number';
-    distanceInput1.min = '1';
-    distanceInput1.max = '99'; // Limita il numero massimo a 99
-    distanceInput1.value = '5';
-    distanceInput1.size = '6'; // Limita l'input a due cifre
-    distanceInput1.style.padding = '5px';
-    distanceInput1.style.boxSizing = 'border-box';
-    distanceInput1.addEventListener('input', (e) => {
-        maxDistance1 = e.target.value ? parseInt(e.target.value, 10) : Infinity;
+    const maxdistanceFromFleetTxt = document.createElement('input');
+    maxdistanceFromFleetTxt.type = 'number';
+    maxdistanceFromFleetTxt.min = '1';
+    maxdistanceFromFleetTxt.max = '99'; // Limita il numero massimo a 99
+    maxdistanceFromFleetTxt.value = '5';
+    maxdistanceFromFleetTxt.size = '6'; // Limita l'input a due cifre
+    maxdistanceFromFleetTxt.style.padding = '5px';
+    maxdistanceFromFleetTxt.style.boxSizing = 'border-box';
+    maxdistanceFromFleetTxt.addEventListener('input', (e) => {
+        maxdistanceFromFleet = e.target.value ? parseInt(e.target.value, 10) : Infinity;
         updateTable(data);
     });
-    distanceInputContainer.appendChild(distanceInput1);
+    distanceInputContainer.appendChild(maxdistanceFromFleetTxt);
 
 
 
-    const percResultLabel = document.createElement('label');
-    percResultLabel.textContent = '-';
-    percResultLabel.style.fontSize = '14px'; // Modifica la dimensione del font
-    percResultLabel.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
-    percResultLabel.style.fontWeight = 'bold'; // Testo in grassetto
-    percResultLabel.style.margin = '6px';
-    percResultLabel.style.width = 'auto';
-    distanceInputContainer.appendChild(percResultLabel);
+    const probCellaTxt = document.createElement('input');
+    probCellaTxt.type = 'text';
+    probCellaTxt.name = 'probCellaTxt';
+    probCellaTxt.size = '5';
+    probCellaTxt.value = 'probCellaTxt';
+    probCellaTxt.style.fontSize = '14px';
+    probCellaTxt.style.backgroundColor = 'yellow';
+    probCellaTxt.style.margin = '4px';
+    probCellaTxt.style.width = 'auto';
+    distanceInputContainer.appendChild(probCellaTxt);
 
-
-
-    const coeffResultLabel = document.createElement('label');
-    coeffResultLabel.textContent = '-';
-    coeffResultLabel.style.fontSize = '14px'; // Modifica la dimensione del font
-    coeffResultLabel.style.backgroundColor = 'yellow'; // Colore di sfondo giallo
-    coeffResultLabel.style.fontWeight = 'bold'; // Testo in grassetto
-    coeffResultLabel.style.margin = '6px';
-    coeffResultLabel.style.width = 'auto';
-    distanceInputContainer.appendChild(coeffResultLabel);
-
-
-
-    const percCoordTxt = document.createElement('input');
-    percCoordTxt.type = 'text';
-    percCoordTxt.name = 'percCoordTxt';
-    percCoordTxt.size = '5';
-    percCoordTxt.style.margin = '4px';
-    percCoordTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    distanceInputContainer.appendChild(percCoordTxt);
-
-    const cordRippre = document.createElement('div');
-    cordRippre.style.display = 'flex';
-    distanceInputContainer.appendChild(cordRippre);
+    const cordCellaContainer = document.createElement('div');
+    cordCellaContainer.style.display = 'flex';
+    cordCellaContainer.style.margin = '1px';
+    //cordCellaContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    distanceInputContainer.appendChild(cordCellaContainer);
 
     const percCoordxTxt = document.createElement('input');
     percCoordxTxt.type = 'text';
-    percCoordxTxt.name = 'percCoordxTxt';
+    percCoordxTxt.value = 'cella_x';
+    percCoordxTxt.name = 'cella_x';
     percCoordxTxt.size = '2';
     percCoordxTxt.style.margin = '4px';
     percCoordxTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    cordRippre.appendChild(percCoordxTxt);
+    cordCellaContainer.appendChild(percCoordxTxt);
 
     const percCoordyTxt = document.createElement('input');
     percCoordyTxt.type = 'text';
-    percCoordyTxt.name = 'percCoordyTxt';
+    percCoordyTxt.value = 'cella_y';
+    percCoordyTxt.name = 'cella_y';
     percCoordyTxt.size = '2';
     percCoordyTxt.style.margin = '4px';
     percCoordyTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    cordRippre.appendChild(percCoordyTxt);
+    cordCellaContainer.appendChild(percCoordyTxt);
+
+    const AreaLabel = document.createElement('label');
+    AreaLabel.textContent = 'max prob area';
+    distanceInputContainer.appendChild(AreaLabel);
+
+    const probAreaTxt = document.createElement('input');
+    probAreaTxt.type = 'text';
+    probAreaTxt.value = 'probAreaTxt';
+    probAreaTxt.name = 'probAreaTxt';
+    probAreaTxt.style.fontSize = '14px';
+    probAreaTxt.size = '5';
+    probAreaTxt.style.backgroundColor = 'yellow';
+    probAreaTxt.style.margin = '4px';
+    probAreaTxt.style.width = 'auto'; // Imposta una larghezza specifica in pixel
+    distanceInputContainer.appendChild(probAreaTxt);
+
+    const cordAreaContainer = document.createElement('div');
+    cordAreaContainer.style.display = 'flex';
+    cordAreaContainer.style.margin = '1px';
+    //cordAreaContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    distanceInputContainer.appendChild(cordAreaContainer);
+
+    const cordArea_x_Txt = document.createElement('input');
+    cordArea_x_Txt.type = 'text';
+    cordArea_x_Txt.value = 'area_x';
+    cordArea_x_Txt.name = 'area_x';
+    cordArea_x_Txt.size = '5';
+    cordArea_x_Txt.style.margin = '4px';
+    cordArea_x_Txt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    cordAreaContainer.appendChild(cordArea_x_Txt);
+
+    const cordArea_y_Txt = document.createElement('input');
+    cordArea_y_Txt.type = 'text';
+    cordArea_y_Txt.value = 'area_y';
+    cordArea_y_Txt.name = 'area_y';
+    cordArea_y_Txt.size = '5';
+    cordArea_y_Txt.style.margin = '4px';
+    cordArea_y_Txt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    cordAreaContainer.appendChild(cordArea_y_Txt);
 
     const percCoordContainer = document.createElement('div');
     percCoordContainer.style.display = 'flex';
@@ -403,89 +482,6 @@
         incidenza_sdu = parseFloat(e.target.value);
     }); percCoordContainer.appendChild(IncidenzaSduTxt);
 
-    const percLabelContainer = document.createElement('div');
-    percLabelContainer.style.display = 'flex';
-    percLabelContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
-    percLabelContainer.style.margin = '5px'; // Spazio sopra l'etichetta
-    percLabelContainer.style.marginBottom = '10px';
-    //percLabelContainer.style.border = '1px solid black'; // Aggiungi questa linea
-    inputContainer.appendChild(percLabelContainer);
-
-    const divlimitcontainer = document.createElement('div');
-    divlimitcontainer.style.display = 'flex';
-    percLabelContainer.appendChild(divlimitcontainer);
-
-    const DistanceLimitLabel = document.createElement('label');
-    DistanceLimitLabel.textContent = 'Distance limit ';
-    divlimitcontainer.appendChild(DistanceLimitLabel);
-
-    const DistanceLimitcheckbox = document.createElement('input');
-    DistanceLimitcheckbox.type = 'checkbox';
-    DistanceLimitcheckbox.name = 'distancelimitenable';
-    DistanceLimitcheckbox.checked = false;
-    DistanceLimitcheckbox.addEventListener('change', function () {
-        if (DistanceLimitcheckbox.checked) {
-            DistanceLimitContainer.style.display = 'flex';
-        } else {
-            DistanceLimitContainer.style.display = 'none'; // Inizialmente nascosto
-        }
-    });
-    divlimitcontainer.appendChild(DistanceLimitcheckbox);
-
-    const DistanceLimitContainer = document.createElement('div');
-    DistanceLimitContainer.style.display = 'none';
-    DistanceLimitContainer.style.flexDirection = 'column';
-    DistanceLimitContainer.style.margin = '5px';
-    //DistanceLimitContainer.style.border = '1px solid black'; // Aggiungi questa linea
-    percLabelContainer.appendChild(DistanceLimitContainer);
-
-    const fuelTxt = document.createElement('input');
-    fuelTxt.type = 'text';
-    fuelTxt.name = 'fuelTxt';
-    fuelTxt.size = '7';
-    fuelTxt.style.margin = '4px';
-    fuelTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    DistanceLimitContainer.appendChild(fuelTxt);
-
-    const SBcoordsTxt = document.createElement('input');
-    SBcoordsTxt.type = 'text';
-    SBcoordsTxt.name = 'SBcoordsTxt';
-    SBcoordsTxt.size = '5';
-    SBcoordsTxt.value = '11,-16';
-    SBcoordsTxt.style.margin = '4px';
-    SBcoordsTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    DistanceLimitContainer.appendChild(SBcoordsTxt);
-
-    const maxDistancefromSBTxt = document.createElement('input');
-    maxDistancefromSBTxt.type = 'text';
-    maxDistancefromSBTxt.name = 'maxDistancefromSBTxt';
-    maxDistancefromSBTxt.size = '5';
-    maxDistancefromSBTxt.value = '20';
-    maxDistancefromSBTxt.style.margin = '4px';
-    maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    DistanceLimitContainer.appendChild(maxDistancefromSBTxt);
-
-    const AreaLabel = document.createElement('label');
-    AreaLabel.textContent = 'max prob area';
-    DistanceLimitContainer.appendChild(AreaLabel);
-
-    const cordAreaTxt = document.createElement('input');
-    cordAreaTxt.type = 'text';
-    cordAreaTxt.name = 'cordAreaTxt';
-    cordAreaTxt.size = '5';
-    cordAreaTxt.value = '20';
-    cordAreaTxt.style.margin = '4px';
-    cordAreaTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    DistanceLimitContainer.appendChild(cordAreaTxt);
-
-    const probAreaTxt = document.createElement('input');
-    probAreaTxt.type = 'text';
-    probAreaTxt.name = 'probAreaTxt';
-    probAreaTxt.size = '5';
-    probAreaTxt.value = '20';
-    probAreaTxt.style.margin = '4px';
-    probAreaTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    DistanceLimitContainer.appendChild(probAreaTxt);
 
     const button = document.createElement('button');
     button.textContent = 'Avvia Scansione Automatica';
@@ -547,7 +543,7 @@
             button.style.backgroundColor = 'red';
         }
     }
-    
+
     // Esegui la scansione automatica ogni 2 secondi (2000 millisecondi)
     let intervalId = null;
     button.addEventListener('click', toggleScan);
@@ -597,9 +593,9 @@
                 let starbaseX = 0;
                 let starbaseY = 0;
                 [starbaseX, starbaseY] = coords;
-                const maxDistance = parseInt(maxDistancefromSBTxt.value);
+                maxdistanceFromSB = parseInt(maxDistancefromSBTxt.value);
                 const distanceFromStarbase = calculateDistance(starbaseX, starbaseY, x, y);
-                if (distanceFromStarbase > maxDistance) return; // Esclude i settori troppo lontani
+                if (distanceFromStarbase > maxdistanceFromSB) return; // Esclude i settori troppo lontani
             }
             filtered_data.push(el);
         });
@@ -630,10 +626,11 @@
         const coords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
         if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
             const [starbaseX, starbaseY] = coords;
-            const maxDistance = parseInt(maxDistancefromSBTxt.value);
-            const bestArea = findBestArea(filtered_data, starbaseX, starbaseY, maxDistance, currentX, currentY);
-            cordAreaTxt.value = bestArea ? `${bestArea.x},${bestArea.y}` : 'N/A';
-            probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString()+'%' : 'N/A';
+            maxdistanceFromFleet = parseInt(maxdistanceFromFleetTxt.value);
+            const bestArea = findBestArea(filtered_data, starbaseX, starbaseY, maxdistanceFromFleet, currentX, currentY);
+            cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
+            cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
+            probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString() : 'N/A';
             //console.log('Best 5x5 area within maxDistance from starbase:', bestArea);
         }
     }
@@ -646,12 +643,12 @@
         // Filtra i dati per includere solo i settori entro maxDistance dalla starbase
         const dati_filtrati_dist_st = data.filter(item => {
             const distanceFromStarbase = calculateDistance(starbaseX, starbaseY, item.x, item.y);
-            return distanceFromStarbase <= maxDistance;
+            return distanceFromStarbase <= maxdistanceFromSB;
         });
 
         const dati_filtrati_dist_fleet = data.filter(item => {
             const distanceFromFleet = calculateDistance(currentX, currentY, item.x, item.y);
-            return distanceFromFleet <= 15;
+            return distanceFromFleet <= maxdistanceFromSB-5;
         });
 
         // Trova il valore della cella più bassa
@@ -726,13 +723,13 @@
 
         return count > 0 ? totalProb / count : 0;
     }
-    function trovapercentuale(data, maxDistance, percResultLabel, coeffResultLabel, percCoordTxt) {
+    function trovapercentuale(data, maxdistance) {
         let maxProbInRange = -1;
         let closestToMaxProb = null;
 
         // Prima, troviamo la probabilità massima nel range
         data.forEach(item => {
-            if (item.distance <= maxDistance) {
+            if (item.distance <= maxdistance) {
                 if (parseFloat(item.coeff) > maxProbInRange) {
                     maxProbInRange = parseFloat(item.coeff);
                 }
@@ -742,13 +739,11 @@
         // Ora, tra le righe con la probabilità massima, troviamo la più vicina
         let minDistance = Infinity;
         data.forEach(item => {
-            if (item.distance <= maxDistance && parseFloat(item.coeff) === maxProbInRange) {
+            if (item.distance <= maxdistance && parseFloat(item.coeff) === maxProbInRange) {
                 if (item.distance < minDistance) {
                     minDistance = item.distance;
                     closestToMaxProb = item; // Memorizziamo la riga con la probabilità massima e la distanza minima
-                    percResultLabel.textContent = parseFloat(item.prob).toString() + '%';
-                    coeffResultLabel.textContent = parseFloat(item.coeff).toFixed(1).toString();
-                    percCoordTxt.value = item.x + ',' + item.y; // Aggiorniamo il campo di input con le coordinate
+                    probCellaTxt.value = parseFloat(item.prob).toString();// + '%';
                     percCoordxTxt.value = item.x;
                     percCoordyTxt.value =  item.y; // Aggiorniamo il campo di input con le coordinate
                 }
@@ -757,7 +752,7 @@
         return closestToMaxProb;
     }
     function updateTable(data) {
-        let closestToMaxCoeFF = trovapercentuale(data, maxDistance1, percResultLabel, coeffResultLabel, percCoordTxt);
+        let closestToMaxCoeFF = trovapercentuale(data, maxdistanceFromFleet);
         // Creiamo la tabella e evidenziamo la riga più vicina
         data.forEach(item => {
             const row = document.createElement('tr');
@@ -830,7 +825,13 @@
 
                 // Inserisci la percentuale in un elemento con id "fuelPercentageDisplay"
                 fuelTxt.value = fuel + "%";
-                maxDistancefromSBTxt.value = fuel > 30 ? 20 : Math.max(6, Math.floor((fuel / 30) * 20));
+                if (DistanceLimitcheckbox.checked) {
+                maxDistancefromSBTxt.value = fuel > 30 ? maxDistancefromSB_valore_iniziale : Math.max(6, Math.floor((fuel / 30) * maxDistancefromSB_valore_iniziale));}
+                else
+                {
+                maxDistancefromSBTxt.value = 100;
+
+                }
                 //maxDistancefromSBTxt.value = fuel > 30 ? 20 : Math.floor((fuel / 30) * 20);
             }
         }
@@ -847,14 +848,22 @@
     }
     function ocrUpdatesize(size) {
         let sizestr = String(size) + 'px';
-        coeffResultLabel.style.fontSize = sizestr; // Modifica la dimensione del font
-        percCoordTxt.style.fontSize = sizestr; // Modifica la dimensione del font
+        probCellaTxt.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordxTxt.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordyTxt.style.fontSize = sizestr; // Modifica la dimensione del font
+        probAreaTxt.style.fontSize = sizestr; // Modifica la dimensione del font
+        cordArea_x_Txt.style.fontSize = sizestr; // Modifica la dimensione del font
+        cordArea_y_Txt.style.fontSize = sizestr; // Modifica la dimensione del font
         let sizeelement = String(50 + 3 * (size - 13)) + 'px';
-        percCoordTxt.style.width = sizeelement;
+        probCellaTxt.style.width = sizeelement;
         percCoordxTxt.style.width = sizeelement;
         percCoordyTxt.style.width = sizeelement;
+        probAreaTxt.style.width = sizeelement;
+        cordArea_x_Txt.style.width = sizeelement;
+        cordArea_y_Txt.style.width = sizeelement;
     }
     function ocrUpdatecolor(color) {
-        coeffResultLabel.style.backgroundColor = color; // Colore di sfondo giallo
+        probCellaTxt.style.backgroundColor = color; // Colore di sfondo giallo
+        probAreaTxt.style.backgroundColor = color; // Colore di sfondo giallo
     }
 })();
