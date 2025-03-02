@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V12.2
+// @name         SDU Scanner V12.7
 // @namespace    http://tampermonkey.net/
-// @version      12.2
+// @version      12.6
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,16 +10,18 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V12.2 by lucadjr';
+    let titolo = 'SDU Scanner V12.7 by lucadjr';
     let currentX = 0, currentY = 0;
     let fleetName = 'My Fleet';
     let selectedColor = 'yellow';
     let fuel = 0;
     let foodValue = 0;
-    let incidenza_sdu = 0.7;
-    let incidenza_count = 0.3;
+    let incidenza_sdu = 0.2;
+    let incidenza_count = 0.4;
     let maxdistanceFromSB = Infinity; //limite default
-    let maxDistancefromSB_valore_iniziale = 55;
+    let maxDistancefromSB_valore_iniziale = 30;
+    let starbaseX = 0;
+    let starbaseY = 0;
 
     function makeDraggable(el) {
         el.style.position = 'absolute';
@@ -164,7 +166,7 @@
     const DistanceLimitcheckbox = document.createElement('input');
     DistanceLimitcheckbox.type = 'checkbox';
     DistanceLimitcheckbox.name = 'distancelimitenable';
-    DistanceLimitcheckbox.checked = false;
+    DistanceLimitcheckbox.checked = true;
     DistanceLimitcheckbox.addEventListener('change', function () {
         if (DistanceLimitcheckbox.checked) {
             DistanceLimitContainer.style.display = 'flex';
@@ -175,7 +177,7 @@
     divlimitcontainer.appendChild(DistanceLimitcheckbox);
 
     const DistanceLimitContainer = document.createElement('div');
-    DistanceLimitContainer.style.display = 'none';
+    DistanceLimitContainer.style.display = 'flex';
     DistanceLimitContainer.style.flexDirection = 'column';
     DistanceLimitContainer.style.margin = '5px';
     //DistanceLimitContainer.style.border = '1px solid black'; // Aggiungi questa linea
@@ -185,7 +187,7 @@
     maxDistancefromSBTxt.type = 'number';
     maxDistancefromSBTxt.name = 'maxDistancefromSBTxt';
     maxDistancefromSBTxt.size = '5';
-    maxDistancefromSBTxt.value = '100';
+    maxDistancefromSBTxt.value = '30';
     maxDistancefromSBTxt.style.margin = '4px';
     maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxDistancefromSBTxt.addEventListener('input', (e) => {
@@ -312,7 +314,7 @@
     const coeffcheckbox1 = document.createElement('input');
     coeffcheckbox1.type = 'checkbox';
     coeffcheckbox1.name = 'coeffcheckbox1';
-    coeffcheckbox1.checked = false;
+    coeffcheckbox1.checked = true;
     coeffcheckContainer1.appendChild(coeffcheckbox1);
 
     const distpercContainer1 = document.createElement('div');
@@ -385,7 +387,7 @@
     const coeffcheckbox2 = document.createElement('input');
     coeffcheckbox2.type = 'checkbox';
     coeffcheckbox2.name = 'coeffcheckbox2';
-    coeffcheckbox2.checked = false;
+    coeffcheckbox2.checked = true;
     coeffcheckContainer2.appendChild(coeffcheckbox2);
 
     const distpercContainer2 = document.createElement('div');
@@ -397,7 +399,7 @@
     maxdistanceFromFleetTxt2.type = 'number';
     maxdistanceFromFleetTxt2.min = '1';
     maxdistanceFromFleetTxt2.max = '99'; // Limita il numero massimo a 99
-    maxdistanceFromFleetTxt2.value = '5';
+    maxdistanceFromFleetTxt2.value = '2';
     maxdistanceFromFleetTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt2.style.padding = '5px';
     maxdistanceFromFleetTxt2.style.margin = '4px';
@@ -460,7 +462,7 @@
     coeffcheckbox3.name = 'coeffcheckbox2';
     coeffcheckbox3.checked = false;
     coeffcheckContainer3.appendChild(coeffcheckbox3);
-    
+
     const distpercContainer3 = document.createElement('div');
     distpercContainer3.style.display = 'flex';
     //distpercContainer3.style.border = '1px solid black'; // Aggiungi questa linea
@@ -487,8 +489,6 @@
     probCellaTxt3.style.margin = '4px';
     probCellaTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
     distpercContainer3.appendChild(probCellaTxt3);
-
-    
 
     const cordCellaContainer3 = document.createElement('div');
     cordCellaContainer3.style.display = 'flex';
@@ -520,8 +520,6 @@
     percCoordyTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
     cordCellaContainer3.appendChild(percCoordyTxt3);
 
-
-
     const percCoordContainer = document.createElement('div');
     percCoordContainer.style.display = 'flex';
     percCoordContainer.style.flexDirection = 'column'; // Cambia l'orientamento a verticale
@@ -534,6 +532,22 @@
     AreaLabel.textContent = 'max prob area';
     percCoordContainer.appendChild(AreaLabel);
 
+    const cordAreaContainer1 = document.createElement('div');
+    cordAreaContainer1.style.display = 'flex';
+    cordAreaContainer1.style.margin = '1px';
+    //cordAreaContainer1.style.border = '1px solid black'; // Aggiungi questa linea
+    percCoordContainer.appendChild(cordAreaContainer1);
+
+    const maxareaFromFleetTxt = document.createElement('input');
+    maxareaFromFleetTxt.type = 'number';
+    maxareaFromFleetTxt.min = '1';
+    maxareaFromFleetTxt.max = '99'; // Limita il numero massimo a 99
+    maxareaFromFleetTxt.value = '17';
+    maxareaFromFleetTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    maxareaFromFleetTxt.style.padding = '5px';
+    maxareaFromFleetTxt.style.margin = '4px';
+    cordAreaContainer1.appendChild(maxareaFromFleetTxt);
+
     const probAreaTxt = document.createElement('input');
     probAreaTxt.type = 'text';
     probAreaTxt.value = 'probAreaTxt';
@@ -543,14 +557,14 @@
     probAreaTxt.style.backgroundColor = 'yellow';
     probAreaTxt.style.padding = '5px';
     probAreaTxt.style.margin = '4px';
-    //probAreaTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    percCoordContainer.appendChild(probAreaTxt);
+    probAreaTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    cordAreaContainer1.appendChild(probAreaTxt);
 
-    const cordAreaContainer = document.createElement('div');
-    cordAreaContainer.style.display = 'flex';
-    cordAreaContainer.style.margin = '1px';
-    //cordAreaContainer.style.border = '1px solid black'; // Aggiungi questa linea
-    percCoordContainer.appendChild(cordAreaContainer);
+    const cordAreaContainer2 = document.createElement('div');
+    cordAreaContainer2.style.display = 'flex';
+    cordAreaContainer2.style.margin = '1px';
+    //cordAreaContainer2.style.border = '1px solid black'; // Aggiungi questa linea
+    percCoordContainer.appendChild(cordAreaContainer2);
 
     const cordArea_x_Txt = document.createElement('input');
     cordArea_x_Txt.type = 'text';
@@ -562,7 +576,7 @@
     cordArea_x_Txt.style.padding = '5px';
     cordArea_x_Txt.style.margin = '4px';
     cordArea_x_Txt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    cordAreaContainer.appendChild(cordArea_x_Txt);
+    cordAreaContainer2.appendChild(cordArea_x_Txt);
 
     const cordArea_y_Txt = document.createElement('input');
     cordArea_y_Txt.type = 'text';
@@ -574,7 +588,7 @@
     cordArea_y_Txt.style.padding = '5px';
     cordArea_y_Txt.style.margin = '4px';
     cordArea_y_Txt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    cordAreaContainer.appendChild(cordArea_y_Txt);
+    cordAreaContainer2.appendChild(cordArea_y_Txt);
 
     const IncidenzaCountLabel = document.createElement('label');
     IncidenzaCountLabel.textContent = 'Inc. count';
@@ -586,7 +600,7 @@
     IncidenzaCountTxt.min = '0';
     IncidenzaCountTxt.max = '1'; // Limita il numero massimo a 99
     IncidenzaCountTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
-    IncidenzaCountTxt.value = '0.3';
+    IncidenzaCountTxt.value = '0.4';
     IncidenzaCountTxt.size = '2'; // Limita l'input a due cifre
     IncidenzaCountTxt.style.padding = '5px';
     IncidenzaCountTxt.addEventListener('input', (e) => {
@@ -604,7 +618,7 @@
     IncidenzaSduTxt.min = '0';
     IncidenzaSduTxt.max = '1'; // Limita il numero massimo a 99
     IncidenzaSduTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
-    IncidenzaSduTxt.value = '0.7';
+    IncidenzaSduTxt.value = '0.2';
     IncidenzaSduTxt.size = '2'; // Limita l'input a due cifre
     IncidenzaSduTxt.style.padding = '5px';
     IncidenzaSduTxt.addEventListener('input', (e) => {
@@ -625,7 +639,6 @@
     sortProbRadio.type = 'radio';
     sortProbRadio.name = 'sortOption';
     sortProbRadio.value = 'prob';
-    sortProbRadio.checked = true;
     probContainer.appendChild(sortProbRadio);
 
     const DistanceContainer = document.createElement('div');
@@ -641,6 +654,7 @@
     const sortDistanceRadio = document.createElement('input');
     sortDistanceRadio.type = 'radio';
     sortDistanceRadio.name = 'sortOption';
+    sortDistanceRadio.checked = true;
     sortDistanceRadio.value = 'distance';
     DistanceContainer.appendChild(sortDistanceRadio);
 
@@ -683,6 +697,18 @@
     table.style.borderCollapse = 'collapse';
     table.style.marginTop = '10px';
     table.style.marginBottom = '10px';
+    // Aggiorna l'intestazione della tabella con le nuove colonne
+    table.innerHTML = `
+                <tr>
+                    <th style="border-bottom: 1px solid #ccc;">Coeff</th>
+                    <th style="border-bottom: 1px solid #ccc;">Prob (%)</th>
+                    <th style="border-bottom: 1px solid #ccc;">Count</th>
+                    <th style="border-bottom: 1px solid #ccc;">SDU</th>
+                    <th style="border-bottom: 1px solid #ccc;">Distanza</th>
+                    <th style="border-bottom: 1px solid #ccc;">Coords</th>
+                    <th style="border-bottom: 1px solid #ccc;">Time</th>
+                </tr>
+            `;
     tablecontainer.appendChild(table);
 
     const byebyecontainer = document.createElement('div');
@@ -705,9 +731,8 @@
             toggleChars('on');
         }
     }
-
     // Esegui la funzione ogni 20 secondi (20000 millisecondi)
-    setInterval(simulateButtonClick, 45000);
+    setInterval(simulateButtonClick, 35000);
 
     function toggleScan() {
         if (intervalId) {
@@ -721,7 +746,6 @@
             button.style.backgroundColor = 'red';
         }
     }
-
     // Esegui la scansione automatica ogni 2 secondi (2000 millisecondi)
     let intervalId = null;
     button.addEventListener('click', toggleScan);
@@ -754,83 +778,37 @@
                 data.push({ coeff, prob, x, y, distance, count, sdu, time: timeOnly });
             }
         });
-        filterData(data);
+        if (sortProbRadio.checked) {
+            data.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
+        } else if (sortDistanceRadio.checked) {
+            data.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+        } else {
+            data.sort((a, b) => parseFloat(b.coeff) - parseFloat(a.coeff));
+        }
+        let filtered_data = filterData(data);
+        let bestclose = update_celle(filtered_data);
+        updateTable(filtered_data, bestclose);
     }
     function filterData(data) {
-        const filtered_data = [];
         if (DistanceLimitcheckbox.checked) {
             maxdistanceFromSB = parseInt(maxDistancefromSBTxt.value);
         } else {
-            maxdistanceFromSB = Infinity;
+            maxdistanceFromSB = maxDistancefromSB_valore_iniziale;
         }
-        data.forEach(el => {
-            const x = el.x;
-            const y = el.y;
-            if (DistanceLimitcheckbox.checked) {
-                const starbaseInput = SBcoordsTxt.value.trim();
-                const coords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
-                if (coords.length !== 2 || isNaN(coords[0]) || isNaN(coords[1])) {
-                    alert("Inserisci le coordinate nel formato corretto: x,y (es. 15,-9)");
-                    return;
-                }
-                let starbaseX = 0;
-                let starbaseY = 0;
-                [starbaseX, starbaseY] = coords;
+        const filtered_Data = data.filter(item => calculateDistance(starbaseX, starbaseY, item.x, item.y) <= maxdistanceFromSB);
 
-                const distanceFromStarbase = calculateDistance(starbaseX, starbaseY, x, y);
-                if (distanceFromStarbase > maxdistanceFromSB) return; // Esclude i settori troppo lontani
-            }
-            filtered_data.push(el);
-        });
-        // Aggiorna l'intestazione della tabella con le nuove colonne
-        table.innerHTML = `
-                <tr>
-                    <th style="border-bottom: 1px solid #ccc;">Coeff</th>
-                    <th style="border-bottom: 1px solid #ccc;">Prob (%)</th>
-                    <th style="border-bottom: 1px solid #ccc;">Count</th>
-                    <th style="border-bottom: 1px solid #ccc;">SDU</th>
-                    <th style="border-bottom: 1px solid #ccc;">Distanza</th>
-                    <th style="border-bottom: 1px solid #ccc;">Coords</th>
-                    <th style="border-bottom: 1px solid #ccc;">Time</th>
-                </tr>
-            `;
-        if (sortProbRadio.checked) {
-            filtered_data.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
-            updateTable(filtered_data);
-        } else if (sortDistanceRadio.checked) {
-            filtered_data.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-            updateTable(filtered_data);
-        } else {
-            filtered_data.sort((a, b) => parseFloat(b.coeff) - parseFloat(a.coeff));
-            updateTable(filtered_data);
-        }
-        // Cerca l'area 5x5 con la probabilità media maggiore
-        const starbaseInput = SBcoordsTxt.value.trim();
-        const coords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
-        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
-            const [starbaseX, starbaseY] = coords;
-            const bestArea = findBestArea(filtered_data, starbaseX, starbaseY, parseInt(maxDistancefromSBTxt.value), currentX, currentY);
-            cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
-            cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
-            probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString() : 'N/A';
-            //console.log('Best 5x5 area within maxDistance from starbase:', bestArea);
-        }
+        return filtered_Data;
     }
-
-    function findBestArea(data, starbaseX, starbaseY, maxDistance, currentX, currentY) {
+    function findBestArea(data, starbaseX, starbaseY, currentX, currentY) {
         let bestArea = null;
         let maxAvgProb = -1;
         let bestCell = null;
 
         // Filtra i dati per includere solo i settori entro maxDistance dalla starbase
-        const dati_filtrati_dist_st = data.filter(item => {
-            const distanceFromStarbase = calculateDistance(starbaseX, starbaseY, item.x, item.y);
-            return distanceFromStarbase <= maxdistanceFromSB;
-        });
 
         const dati_filtrati_dist_fleet = data.filter(item => {
             const distanceFromFleet = calculateDistance(currentX, currentY, item.x, item.y);
-            return distanceFromFleet; // <= maxdistanceFromSB - 5;
+            return distanceFromFleet <= parseInt(maxareaFromFleetTxt.value);
         });
 
         // Trova il valore della cella più bassa
@@ -883,6 +861,79 @@
 
         return bestCell;
     }
+    function trovapercentuale(data, maxdistance, coeffchecked) {
+        let maxProbInRange = -1;
+        let maxCoeffInRange = -1;
+        let closestToMaxProb = null;
+        let closestToMaxCoeff = null;
+    
+        // 🔍 Applichiamo il filtro simile a `findBestArea`
+        const filteredData = data.filter(item => calculateDistance(currentX, currentY, item.x, item.y) <= maxdistance);
+    
+        if (filteredData.length === 0) {
+            return null;
+        }
+    
+        // Troviamo i massimi valori di probabilità e coefficiente
+        filteredData.forEach(item => {
+            let prob = parseFloat(item.prob);
+            let coeff = parseFloat(item.coeff);
+            if (!isNaN(prob) && prob > maxProbInRange) maxProbInRange = prob;
+            if (!isNaN(coeff) && coeff > maxCoeffInRange) maxCoeffInRange = coeff;
+        });
+    
+        
+        let minDistanceProb = Infinity;
+        let minDistanceCoeff = Infinity;
+    
+        // Troviamo la cella con il valore massimo e distanza minima
+        filteredData.forEach(item => {
+            let distance = calculateDistance(currentX, currentY, item.x, item.y);
+            let prob = parseFloat(item.prob);
+            let coeff = parseFloat(item.coeff);
+    
+            if (!isNaN(prob) && prob === maxProbInRange && distance < minDistanceProb) {
+                minDistanceProb = distance;
+                closestToMaxProb = item;
+            }
+    
+            if (!isNaN(coeff) && coeff === maxCoeffInRange && distance < minDistanceCoeff) {
+                minDistanceCoeff = distance;
+                closestToMaxCoeff = item;
+            }
+        });
+    
+    
+        return coeffchecked ? closestToMaxCoeff : closestToMaxProb;
+    }
+    function update_celle(data){
+        const bestArea = findBestArea(data, starbaseX, starbaseY, currentX, currentY);
+        cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
+        cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
+        probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString() : 'N/A';
+
+        let distanza_max_cella = parseInt(maxdistanceFromFleetTxt2.value)
+        let coeff_on = coeffcheckbox2.checked
+        let bestclose = trovapercentuale(data, distanza_max_cella, coeff_on);
+        probCellaTxt2.value = parseFloat(bestclose.prob).toString();// + '%';
+        percCoordxTxt2.value = bestclose ? `${bestclose.x}` : 'N/A';// bestclose.x;
+        percCoordyTxt2.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
+
+        distanza_max_cella = parseInt(maxdistanceFromFleetTxt3.value)
+        coeff_on = coeffcheckbox3.checked
+        bestclose = trovapercentuale(data, distanza_max_cella, coeff_on);
+        probCellaTxt3.value = parseFloat(bestclose.prob).toString();// + '%';
+        percCoordxTxt3.value = bestclose ? `${bestclose.x}` : 'N/A';// bestclose.x;
+        percCoordyTxt3.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
+
+        distanza_max_cella = parseInt(maxdistanceFromFleetTxt1.value)
+        coeff_on = coeffcheckbox1.checked
+        bestclose = trovapercentuale(data, distanza_max_cella, coeff_on);
+        probCellaTxt1.value = parseFloat(bestclose.prob).toString();// + '%';
+        percCoordxTxt1.value = bestclose ? `${bestclose.x}` : 'N/A';// bestclose.x;
+        percCoordyTxt1.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
+        return bestclose;
+    }
 
 
     function prob_media_area(centerX, centerY, data, minProb) {
@@ -897,7 +948,7 @@
                 if (sectorData) {
                     totalProb += parseFloat(sectorData.prob);
                 } else {
-                    totalProb += minProb/2;
+                    totalProb += minProb / 2;
                 }
                 count++;
             }
@@ -905,66 +956,9 @@
 
         return count > 0 ? totalProb / count : 0;
     }
-    function trovapercentuale(data, maxdistance, coeffchecked) {
-        let maxProbInRange = -1;
-        let closestToMaxProb = null;
-        let maxCoeffInRange = -1;
-        let closestToMaxCoeff = null;
 
+    function updateTable(data, bestclose) {
 
-        // Prima, troviamo la probabilità massima nel range
-        data.forEach(item => {
-            if (item.distance <= maxdistance) {
-                if (parseFloat(item.coeff) > maxCoeffInRange) {
-                    maxCoeffInRange = parseFloat(item.coeff);
-                }
-                if (parseFloat(item.prob) > maxProbInRange) {
-                    maxProbInRange = parseFloat(item.prob);
-                }
-            }
-        });
-
-
-        // Ora, tra le righe con la probabilità massima, troviamo la più vicina
-        let minDistanceProb = Infinity;
-        let minDistanceCoeff = Infinity;
-        data.forEach(item => {
-            if (item.distance <= maxdistance && parseFloat(item.prob) === maxProbInRange) {
-                if (item.distance < minDistanceProb) {
-                    minDistanceProb = item.distance;
-                    closestToMaxProb = item; // Memorizziamo la riga con la probabilità massima e la distanza minima
-                }
-            }
-            if (item.distance <= maxdistance && parseFloat(item.coeff) === maxCoeffInRange) {
-                if (item.distance < minDistanceCoeff) {
-                    minDistanceCoeff = item.distance;
-                    closestToMaxCoeff = item; // Memorizziamo la riga con la probabilità massima e la distanza minima
-                }
-            }
-        });
-        if (coeffchecked) {
-            return closestToMaxCoeff;
-        }
-        else {
-            return closestToMaxProb;            
-        }
-    }
-    function updateTable(data) {
-        let bestclose = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt2.value) ,coeffcheckbox2.checked);
-        probCellaTxt2.value = parseFloat(bestclose.prob).toString();// + '%';
-        percCoordxTxt2.value = bestclose.x;
-        percCoordyTxt2.value = bestclose.y; // Aggiorniamo il campo di input con le coordinate
-
-        bestclose = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt3.value) ,coeffcheckbox3.checked);
-        probCellaTxt3.value = parseFloat(bestclose.prob).toString();// + '%';
-        percCoordxTxt3.value = bestclose.x;
-        percCoordyTxt3.value = bestclose.y; // Aggiorniamo il campo di input con le coordinate
-
-
-        bestclose = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt1.value) ,coeffcheckbox1.checked);
-        probCellaTxt1.value = parseFloat(bestclose.prob).toString();// + '%';
-        percCoordxTxt1.value = bestclose.x;
-        percCoordyTxt1.value = bestclose.y; // Aggiorniamo il campo di input con le coordinate
 
         // Creiamo la tabella e evidenziamo la riga più vicina
         data.forEach(item => {
@@ -991,7 +985,17 @@
     function calculateDistance(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
     }
-    function updateFleetPosition() {
+    function updateFleetPosition() { // e starbase input
+        const starbaseInput = SBcoordsTxt.value.trim();
+
+        const starbaseInputcoords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
+        if (starbaseInputcoords.length !== 2 || isNaN(starbaseInputcoords[0]) || isNaN(starbaseInputcoords[1])) {
+            alert("Inserisci le coordinate nel formato corretto: x,y (es. 15,-9)");
+            [starbaseX, starbaseY] = '11,-16';
+        } else {
+            [starbaseX, starbaseY] = starbaseInputcoords;
+        }
+        
         const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${fleetName}"]`);
         if (fleetRow) {
             const stateRow = fleetRow.closest('tr').nextElementSibling;
@@ -1039,11 +1043,18 @@
                 // Inserisci la percentuale in un elemento con id "fuelPercentageDisplay"
                 fuelTxt.value = fuel + "%";
                 if (DistanceLimitcheckbox.checked) {
-                    maxDistancefromSBTxt.value = fuel > 30 ? maxDistancefromSB_valore_iniziale : Math.max(6, Math.floor((fuel / 30) * maxDistancefromSB_valore_iniziale));
+                    let distanza_calc_fuel = fuel > 40
+                        ? maxDistancefromSB_valore_iniziale
+                        : Math.max(10, Math.floor((fuel / 40) * maxDistancefromSB_valore_iniziale));
+                    let distanza_flotta = parseInt(calculateDistance(currentX, currentY, starbaseX, starbaseY));
+                    if (distanza_calc_fuel < distanza_flotta) {
+                        maxDistancefromSBTxt.value = distanza_flotta;
+                    } else {
+                        maxDistancefromSBTxt.value = distanza_calc_fuel
+                    }
                 }
                 else {
-                    maxDistancefromSBTxt.value = 100;
-
+                    maxDistancefromSBTxt.value = maxDistancefromSB_valore_iniziale;
                 }
                 //maxDistancefromSBTxt.value = fuel > 30 ? 20 : Math.floor((fuel / 30) * 20);
             }
