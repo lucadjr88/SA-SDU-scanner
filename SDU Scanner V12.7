@@ -697,18 +697,6 @@
     table.style.borderCollapse = 'collapse';
     table.style.marginTop = '10px';
     table.style.marginBottom = '10px';
-    // Aggiorna l'intestazione della tabella con le nuove colonne
-    table.innerHTML = `
-                <tr>
-                    <th style="border-bottom: 1px solid #ccc;">Coeff</th>
-                    <th style="border-bottom: 1px solid #ccc;">Prob (%)</th>
-                    <th style="border-bottom: 1px solid #ccc;">Count</th>
-                    <th style="border-bottom: 1px solid #ccc;">SDU</th>
-                    <th style="border-bottom: 1px solid #ccc;">Distanza</th>
-                    <th style="border-bottom: 1px solid #ccc;">Coords</th>
-                    <th style="border-bottom: 1px solid #ccc;">Time</th>
-                </tr>
-            `;
     tablecontainer.appendChild(table);
 
     const byebyecontainer = document.createElement('div');
@@ -799,13 +787,11 @@
 
         return filtered_Data;
     }
-    function findBestArea(data, starbaseX, starbaseY, currentX, currentY) {
+    function findBestArea(data) {
         let bestArea = null;
         let maxAvgProb = -1;
         let bestCell = null;
-
         // Filtra i dati per includere solo i settori entro maxDistance dalla starbase
-
         const dati_filtrati_dist_fleet = data.filter(item => {
             const distanceFromFleet = calculateDistance(currentX, currentY, item.x, item.y);
             return distanceFromFleet <= parseInt(maxareaFromFleetTxt.value);
@@ -907,7 +893,7 @@
         return coeffchecked ? closestToMaxCoeff : closestToMaxProb;
     }
     function update_celle(data){
-        const bestArea = findBestArea(data, starbaseX, starbaseY, currentX, currentY);
+        const bestArea = findBestArea(data);
         cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
         cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
         probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString() : 'N/A';
@@ -934,7 +920,7 @@
         percCoordyTxt1.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         return bestclose;
     }
-
+    
 
     function prob_media_area(centerX, centerY, data, minProb) {
         let totalProb = 0;
@@ -959,7 +945,18 @@
 
     function updateTable(data, bestclose) {
 
-
+        // Aggiorna l'intestazione della tabella con le nuove colonne
+        table.innerHTML = `
+                    <tr>
+                        <th style="border-bottom: 1px solid #ccc;">Coeff</th>
+                        <th style="border-bottom: 1px solid #ccc;">Prob (%)</th>
+                        <th style="border-bottom: 1px solid #ccc;">Count</th>
+                        <th style="border-bottom: 1px solid #ccc;">SDU</th>
+                        <th style="border-bottom: 1px solid #ccc;">Distanza</th>
+                        <th style="border-bottom: 1px solid #ccc;">Coords</th>
+                        <th style="border-bottom: 1px solid #ccc;">Time</th>
+                    </tr>
+                `;
         // Creiamo la tabella e evidenziamo la riga più vicina
         data.forEach(item => {
             const row = document.createElement('tr');
