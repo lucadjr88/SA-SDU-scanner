@@ -687,13 +687,16 @@
     container.appendChild(button);
 
     const tablecontainer = document.createElement('div');
-    tablecontainer.style.maxHeight = '300px';
-    tablecontainer.style.overflowY = 'auto';
-    //tablecontainer.style.border = '1px solid black'; // Aggiungi questa linea
+    tablecontainer.style.maxHeight = '60px'; // Imposta l'altezza massima
+    tablecontainer.style.overflowY = 'auto';  // Aggiunge lo scroll verticale
+    tablecontainer.style.border = '1px solid black'; // Solo per debug
+    tablecontainer.style.width = '100%';  // Per evitare overflow orizzontale
+    tablecontainer.style.display = 'block'; // Assicura il corretto comportamento
     container.appendChild(tablecontainer);
-
+    
     const table = document.createElement('table');
-    table.style.width = '100%';
+    table.style.width = '100%'; // La tabella deve riempire il contenitore
+    table.style.height = '100%';
     table.style.borderCollapse = 'collapse';
     table.style.marginTop = '10px';
     table.style.marginBottom = '10px';
@@ -779,6 +782,8 @@
         // Uniamo i dati salvati con i nuovi dati
         savedCells.forEach((value, key) => {
             if (!existingSectors.has(key)) {
+                // Ricalcola la distanza con i valori attuali
+                value.distance = calculateDistance(currentX, currentY, value.x, value.y);
                 data.push(value);
             }
         });
