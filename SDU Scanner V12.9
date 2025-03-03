@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V12.8
+// @name         SDU Scanner V12.9
 // @namespace    http://tampermonkey.net/
-// @version      12.8
+// @version      12.9
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,9 +10,9 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V12.8 by lucadjr';
+    let titolo = 'SDU Scanner V12.9 by lucadjr';
     let currentX = 0, currentY = 0;
-    let fleetName = 'My_Fleet';
+    let fleetName = 'My Fleet';
     let selectedColor = 'yellow';
     let fuel = 0;
     let foodValue = 0;
@@ -693,7 +693,7 @@
     tablecontainer.style.width = '100%';  // Per evitare overflow orizzontale
     tablecontainer.style.display = 'block'; // Assicura il corretto comportamento
     container.appendChild(tablecontainer);
-    
+
     const table = document.createElement('table');
     table.style.width = '100%'; // La tabella deve riempire il contenitore
     table.style.height = '100%';
@@ -748,7 +748,7 @@
         const elements = document.querySelectorAll('.sector_sdu_txt');
         const data = [];
         const existingSectors = new Set();
-    
+
         elements.forEach(el => {
             const prob = el.textContent.trim();
             if (prob !== '0%' && prob !== '') {
@@ -756,29 +756,29 @@
                 const x = parseFloat(idParts[idParts.length - 2]);
                 const y = parseFloat(idParts[idParts.length - 1]);
                 existingSectors.add(`${x},${y}`);
-    
+
                 const rectId = `sector_sdu_${x}_${y}`;
                 const rectElement = document.getElementById(rectId);
-    
+
                 const count = rectElement?.getAttribute('count') || 'N/A';
                 const sdu = rectElement?.getAttribute('sdu') || 'N/A';
                 const time = rectElement?.getAttribute('time') || 'N/A';
                 const timeOnly = time.split(' ')[1] || 'N/A';
-    
+
                 const distance = calculateDistance(currentX, currentY, x, y);
                 const coeff = calculateCoeff(prob, count, sdu);
-    
+
                 const cellData = { coeff, prob, x, y, distance, count, sdu, time: timeOnly };
-    
+
                 // Se la distanza è <= 2, salviamo la cella
                 if (distance <= 2) {
                     savedCells.set(`${x},${y}`, cellData);
                 }
-    
+
                 data.push(cellData);
             }
         });
-    
+
         // Uniamo i dati salvati con i nuovi dati
         savedCells.forEach((value, key) => {
             if (!existingSectors.has(key)) {
@@ -787,7 +787,7 @@
                 data.push(value);
             }
         });
-    
+
         // Ordinamento
         if (sortProbRadio.checked) {
             data.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
@@ -796,12 +796,12 @@
         } else {
             data.sort((a, b) => parseFloat(b.coeff) - parseFloat(a.coeff));
         }
-    
+
         let filtered_data = filterData(data);
         let bestclose = update_celle(filtered_data);
         updateTable(filtered_data, bestclose);
     }
-    
+
     function filterData(data) {
         if (DistanceLimitcheckbox.checked) {
             maxdistanceFromSB = parseInt(maxDistancefromSBTxt.value);
@@ -877,14 +877,18 @@
         let maxCoeffInRange = -1;
         let closestToMaxProb = null;
         let closestToMaxCoeff = null;
-    
+
         // 🔍 Applichiamo il filtro simile a `findBestArea`
-        const filteredData = data.filter(item => calculateDistance(currentX, currentY, item.x, item.y) <= maxdistance);
-    
+        const filteredData = data.filter(item => {
+            const distanzacella = calculateDistance(currentX, currentY, item.x, item.y);
+            return distanzacella <= maxdistance;
+        });
+
+
         if (filteredData.length === 0) {
             return null;
         }
-    
+
         // Troviamo i massimi valori di probabilità e coefficiente
         filteredData.forEach(item => {
             let prob = parseFloat(item.prob);
@@ -892,55 +896,60 @@
             if (!isNaN(prob) && prob > maxProbInRange) maxProbInRange = prob;
             if (!isNaN(coeff) && coeff > maxCoeffInRange) maxCoeffInRange = coeff;
         });
-    
-        
+
+
         let minDistanceProb = Infinity;
         let minDistanceCoeff = Infinity;
-    
+
         // Troviamo la cella con il valore massimo e distanza minima
         filteredData.forEach(item => {
             let distance = calculateDistance(currentX, currentY, item.x, item.y);
             let prob = parseFloat(item.prob);
             let coeff = parseFloat(item.coeff);
-    
+
             if (!isNaN(prob) && prob === maxProbInRange && distance < minDistanceProb) {
                 minDistanceProb = distance;
                 closestToMaxProb = item;
             }
-    
+
             if (!isNaN(coeff) && coeff === maxCoeffInRange && distance < minDistanceCoeff) {
                 minDistanceCoeff = distance;
                 closestToMaxCoeff = item;
             }
         });
-    
-    
+
+
         return coeffchecked ? closestToMaxCoeff : closestToMaxProb;
     }
-    function update_celle(data){
+    function update_celle(data) {
         const bestArea = findBestArea(data);
         cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
         cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
         probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString() : 'N/A';
 
-
-        let bestclose = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt2.value), coeffcheckbox2.checked);
-        probCellaTxt2.value = parseFloat(bestclose.prob).toString();// + '%';
-        percCoordxTxt2.value = bestclose ? `${bestclose.x}` : 'N/A';// bestclose.x;
-        percCoordyTxt2.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
-
-        bestclose = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt3.value), coeffcheckbox3.checked);
-        probCellaTxt3.value = parseFloat(bestclose.prob).toString();// + '%';
-        percCoordxTxt3.value = bestclose ? `${bestclose.x}` : 'N/A';// bestclose.x;
-        percCoordyTxt3.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
-
-        bestclose = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt1.value), coeffcheckbox1.checked);
-        probCellaTxt1.value = parseFloat(bestclose.prob).toString();// + '%';
-        percCoordxTxt1.value = bestclose ? `${bestclose.x}` : 'N/A';// bestclose.x;
-        percCoordyTxt1.value = bestclose ? `${bestclose.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
-        return bestclose;
+        let bestclose1 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt1.value), coeffcheckbox1.checked);
+        if (bestclose1 !== null) {
+            probCellaTxt1.value = parseFloat(bestclose1.prob).toString();// + '%';
+            percCoordxTxt1.value = bestclose1 ? `${bestclose1.x}` : 'N/A';// bestclose1.x;
+            percCoordyTxt1.value = bestclose1 ? `${bestclose1.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
+        }
+        
+        let bestclose2 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt2.value), coeffcheckbox2.checked);
+        if (bestclose2 !== null) {
+            probCellaTxt2.value = parseFloat(bestclose2.prob).toString();// + '%';
+            percCoordxTxt2.value = bestclose2 ? `${bestclose2.x}` : 'N/A';// bestclose2.x;
+            percCoordyTxt2.value = bestclose2 ? `${bestclose2.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
+        }
+        
+        let bestclose3 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt3.value), coeffcheckbox3.checked);
+        if (bestclose3 !== null) {
+            probCellaTxt3.value = parseFloat(bestclose3.prob).toString();// + '%';
+            percCoordxTxt3.value = bestclose3 ? `${bestclose3.x}` : 'N/A';// bestclose3.x;
+            percCoordyTxt3.value = bestclose3 ? `${bestclose3.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
+        }
+        return bestclose1;
     }
-    
+
 
     function prob_media_area(centerX, centerY, data, minProb) {
         let totalProb = 0;
@@ -1012,7 +1021,7 @@
         } else {
             [starbaseX, starbaseY] = starbaseInputcoords;
         }
-        
+
         const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${fleetName}"]`);
         if (fleetRow) {
             const stateRow = fleetRow.closest('tr').nextElementSibling;
