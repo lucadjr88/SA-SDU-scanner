@@ -1,28 +1,87 @@
 // ==UserScript==
-// @name         SDU Scanner V13
+// @name         SDU Scanner V13.1
 // @namespace    http://tampermonkey.net/
-// @version      13
+// @version      13.1
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
-// @grant        none
+// @grant        GM_setValue
+// @grant        GM_getValue
 // ==/UserScript==
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V13 by lucadjr';
+    let titolo = 'SDU Scanner V13.1 by lucadjr';
     let currentX = 0, currentY = 0;
-    let fleetName = 'My Fleet';
     let selectedColor = 'yellow';
     let fuel = 0;
     let foodValue = 0;
-    let incidenza_sdu = 0.2;
-    let incidenza_count = 0.4;
+    let incidenza_sdu = 0;
+    let incidenza_count = 0;
     let maxdistanceFromSB = Infinity; //limite default
-    let maxDistancefromSB_valore_iniziale = 30;
     let starbaseX = 0;
     let starbaseY = 0;
 
+    let nome_flotta__valore_iniziale = "";
+    let maxDistancefromSB_valore_iniziale = 0;
+    let starbase_valore_iniziale = "";
+
+    let range_cella1__valore_iniziale = 0;
+    let range_cella2__valore_iniziale = 0;
+    let range_cella3__valore_iniziale = 0;
+    let range_area_valore_iniziale = 0;
+
+    let coeffcheckbox1_value = true;
+    let coeffcheckbox2_value = true;
+    let coeffcheckbox3_value = false;
+
+    function salva_parametri() {
+        // Esegui altre azioni basate su questi parametri
+        // Se non ci sono parametri salvati, creiamo e salviamo un oggetto predefinito
+        let parametriSalvati = {
+            nome_flotta__valore_iniziale: nome_flotta__valore_iniziale,
+            maxDistancefromSB_valore_iniziale: maxDistancefromSB_valore_iniziale,
+            starbase_valore_iniziale: starbase_valore_iniziale,
+
+            range_cella1__valore_iniziale: range_cella1__valore_iniziale,
+            range_cella2__valore_iniziale: range_cella2__valore_iniziale,
+            range_cella3__valore_iniziale: range_cella3__valore_iniziale,
+            range_area_valore_iniziale: range_area_valore_iniziale,
+
+            incidenza_sdu: incidenza_sdu,
+            incidenza_count: incidenza_count,
+
+            coeffcheckbox1_value: coeffcheckbox1_value,
+            coeffcheckbox2_value: coeffcheckbox2_value,
+            coeffcheckbox3_value: coeffcheckbox3_value
+        };
+        GM_setValue("parametriSalvati", JSON.stringify(parametriSalvati));
+    }
+    function carica_parametri() {
+        // Controlla se i parametri sono già salvati
+        let parametriSalvati = GM_getValue("parametriSalvati", null);
+
+        if (parametriSalvati) {
+            // Se i parametri esistono, li carica e li converte in oggetto
+            parametriSalvati = JSON.parse(parametriSalvati);
+
+            nome_flotta__valore_iniziale = parametriSalvati.nome_flotta__valore_iniziale || "My Fleet";  // Imposta un valore di default se il parametro non esiste
+            maxDistancefromSB_valore_iniziale = parametriSalvati.maxDistancefromSB_valore_iniziale || 30;
+            starbase_valore_iniziale = parametriSalvati.starbase_valore_iniziale || "11,-16";
+
+            range_cella1__valore_iniziale = parametriSalvati.range_cella1__valore_iniziale || 0;
+            range_cella2__valore_iniziale = parametriSalvati.range_cella2__valore_iniziale || 0;
+            range_cella3__valore_iniziale = parametriSalvati.range_cella3__valore_iniziale || 0;
+            range_area_valore_iniziale = parametriSalvati.range_area_valore_iniziale || 0;
+
+            incidenza_sdu = parametriSalvati.incidenza_sdu || 0;
+            incidenza_count = parametriSalvati.incidenza_count || 0;
+            
+            coeffcheckbox1_value = parametriSalvati.coeffcheckbox1_value || true;
+            coeffcheckbox2_value = parametriSalvati.coeffcheckbox2_value || true;
+            coeffcheckbox3_value = parametriSalvati.coeffcheckbox3_value || false;
+        }
+    }
 
     function makeDraggable(el) {
         el.style.position = 'absolute';
@@ -57,6 +116,8 @@
 
         el.addEventListener('mousedown', onMouseDown);
     }
+
+    carica_parametri();
 
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -137,12 +198,13 @@
 
     const fleetInput = document.createElement('input');
     fleetInput.type = 'text';
-    fleetInput.value = fleetName;
+    fleetInput.value = nome_flotta__valore_iniziale;
     fleetInput.size = '15'
     fleetInput.style.padding = '5px';
     fleetInput.style.boxSizing = 'border-box';
     fleetInput.addEventListener('input', (e) => {
-        fleetName = e.target.value;
+        nome_flotta__valore_iniziale = e.target.value;
+        salva_parametri();
     });
     fleetInputContainer.appendChild(fleetInput);
 
@@ -174,6 +236,7 @@
         } else {
             DistanceLimitContainer.style.display = 'none'; // Inizialmente nascosto
         }
+
     });
     divlimitcontainer.appendChild(DistanceLimitcheckbox);
 
@@ -188,22 +251,26 @@
     maxDistancefromSBTxt.type = 'number';
     maxDistancefromSBTxt.name = 'maxDistancefromSBTxt';
     maxDistancefromSBTxt.size = '5';
-    maxDistancefromSBTxt.value = '30';
+    maxDistancefromSBTxt.value = maxDistancefromSB_valore_iniziale;
     maxDistancefromSBTxt.style.margin = '4px';
     maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxDistancefromSBTxt.addEventListener('input', (e) => {
-        maxDistancefromSB_valore_iniziale = e.target.value ? parseInt(e.target.value, 10) : maxDistancefromSB_valore_iniziale;
+        maxDistancefromSB_valore_iniziale = e.target.value ? parseFloat(e.target.value, 10) : maxDistancefromSB_valore_iniziale;
+        salva_parametri();
     });
     DistanceLimitContainer.appendChild(maxDistancefromSBTxt);
 
     const SBcoordsTxt = document.createElement('input');
     SBcoordsTxt.type = 'text';
-    SBcoordsTxt.value = 'SBcoordsTxt';
     SBcoordsTxt.name = 'SBcoordsTxt';
     SBcoordsTxt.size = '5';
-    SBcoordsTxt.value = '11,-16';
+    SBcoordsTxt.value = starbase_valore_iniziale;
     SBcoordsTxt.style.margin = '4px';
     SBcoordsTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    SBcoordsTxt.addEventListener('input', (e) => {
+        starbase_valore_iniziale = e.target.value;
+        salva_parametri();
+    });
     DistanceLimitContainer.appendChild(SBcoordsTxt);
 
     const fuelTxt = document.createElement('input');
@@ -315,7 +382,11 @@
     const coeffcheckbox1 = document.createElement('input');
     coeffcheckbox1.type = 'checkbox';
     coeffcheckbox1.name = 'coeffcheckbox1';
-    coeffcheckbox1.checked = true;
+    coeffcheckbox1.checked = coeffcheckbox1_value;
+    coeffcheckbox1.addEventListener('change', function () {
+        coeffcheckbox1_value = coeffcheckbox1.checked;
+        salva_parametri();
+    });
     coeffcheckContainer1.appendChild(coeffcheckbox1);
 
     const distpercContainer1 = document.createElement('div');
@@ -327,10 +398,14 @@
     maxdistanceFromFleetTxt1.type = 'number';
     maxdistanceFromFleetTxt1.min = '1';
     maxdistanceFromFleetTxt1.max = '99'; // Limita il numero massimo a 99
-    maxdistanceFromFleetTxt1.value = '5';
+    maxdistanceFromFleetTxt1.value = range_cella1__valore_iniziale;
     maxdistanceFromFleetTxt1.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt1.style.padding = '5px';
     maxdistanceFromFleetTxt1.style.margin = '4px';
+    maxdistanceFromFleetTxt1.addEventListener('input', (e) => {
+        range_cella1__valore_iniziale = parseFloat(e.target.value);
+        salva_parametri();
+    });
     distpercContainer1.appendChild(maxdistanceFromFleetTxt1);
 
     const probCellaTxt1 = document.createElement('input');
@@ -388,7 +463,11 @@
     const coeffcheckbox2 = document.createElement('input');
     coeffcheckbox2.type = 'checkbox';
     coeffcheckbox2.name = 'coeffcheckbox2';
-    coeffcheckbox2.checked = true;
+    coeffcheckbox2.checked = coeffcheckbox2_value;
+    coeffcheckbox2.addEventListener('change', function () {
+        coeffcheckbox2_value = coeffcheckbox2.checked;
+        salva_parametri();
+    });
     coeffcheckContainer2.appendChild(coeffcheckbox2);
 
     const distpercContainer2 = document.createElement('div');
@@ -400,10 +479,14 @@
     maxdistanceFromFleetTxt2.type = 'number';
     maxdistanceFromFleetTxt2.min = '1';
     maxdistanceFromFleetTxt2.max = '99'; // Limita il numero massimo a 99
-    maxdistanceFromFleetTxt2.value = '2';
+    maxdistanceFromFleetTxt2.value = range_cella2__valore_iniziale;
     maxdistanceFromFleetTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt2.style.padding = '5px';
     maxdistanceFromFleetTxt2.style.margin = '4px';
+    maxdistanceFromFleetTxt2.addEventListener('input', (e) => {
+        range_cella2__valore_iniziale = parseFloat(e.target.value);
+        salva_parametri();
+    });
     distpercContainer2.appendChild(maxdistanceFromFleetTxt2);
 
     const probCellaTxt2 = document.createElement('input');
@@ -461,7 +544,11 @@
     const coeffcheckbox3 = document.createElement('input');
     coeffcheckbox3.type = 'checkbox';
     coeffcheckbox3.name = 'coeffcheckbox2';
-    coeffcheckbox3.checked = false;
+    coeffcheckbox3.checked = coeffcheckbox3_value;
+    coeffcheckbox3.addEventListener('change', function () {
+        coeffcheckbox3_value = coeffcheckbox3.checked;
+        salva_parametri();
+    });
     coeffcheckContainer3.appendChild(coeffcheckbox3);
 
     const distpercContainer3 = document.createElement('div');
@@ -473,10 +560,14 @@
     maxdistanceFromFleetTxt3.type = 'number';
     maxdistanceFromFleetTxt3.min = '1';
     maxdistanceFromFleetTxt3.max = '99'; // Limita il numero massimo a 99
-    maxdistanceFromFleetTxt3.value = '5';
+    maxdistanceFromFleetTxt3.value = range_cella3__valore_iniziale;
     maxdistanceFromFleetTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt3.style.padding = '5px';
     maxdistanceFromFleetTxt3.style.margin = '4px';
+    maxdistanceFromFleetTxt3.addEventListener('input', (e) => {
+        range_cella3__valore_iniziale = parseFloat(e.target.value);
+        salva_parametri();
+    });
     distpercContainer3.appendChild(maxdistanceFromFleetTxt3);
 
     const probCellaTxt3 = document.createElement('input');
@@ -543,10 +634,14 @@
     maxareaFromFleetTxt.type = 'number';
     maxareaFromFleetTxt.min = '1';
     maxareaFromFleetTxt.max = '99'; // Limita il numero massimo a 99
-    maxareaFromFleetTxt.value = '17';
+    maxareaFromFleetTxt.value = range_area_valore_iniziale;
     maxareaFromFleetTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxareaFromFleetTxt.style.padding = '5px';
     maxareaFromFleetTxt.style.margin = '4px';
+    maxareaFromFleetTxt.addEventListener('input', (e) => {
+        range_area_valore_iniziale = parseFloat(e.target.value);
+        salva_parametri();
+    });
     cordAreaContainer1.appendChild(maxareaFromFleetTxt);
 
     const probAreaTxt = document.createElement('input');
@@ -601,11 +696,12 @@
     IncidenzaCountTxt.min = '0';
     IncidenzaCountTxt.max = '1'; // Limita il numero massimo a 99
     IncidenzaCountTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
-    IncidenzaCountTxt.value = '0.6';
+    IncidenzaCountTxt.value = incidenza_count;
     IncidenzaCountTxt.size = '2'; // Limita l'input a due cifre
     IncidenzaCountTxt.style.padding = '5px';
     IncidenzaCountTxt.addEventListener('input', (e) => {
         incidenza_count = parseFloat(e.target.value);
+        salva_parametri();
     });
     percCoordContainer.appendChild(IncidenzaCountTxt);
 
@@ -619,12 +715,16 @@
     IncidenzaSduTxt.min = '0';
     IncidenzaSduTxt.max = '1'; // Limita il numero massimo a 99
     IncidenzaSduTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
-    IncidenzaSduTxt.value = '0.3';
+    IncidenzaSduTxt.value = incidenza_sdu;
     IncidenzaSduTxt.size = '2'; // Limita l'input a due cifre
     IncidenzaSduTxt.style.padding = '5px';
     IncidenzaSduTxt.addEventListener('input', (e) => {
         incidenza_sdu = parseFloat(e.target.value);
-    }); percCoordContainer.appendChild(IncidenzaSduTxt);
+        salva_parametri();
+    });
+    percCoordContainer.appendChild(IncidenzaSduTxt);
+
+
 
     const probContainer = document.createElement('div');
     probContainer.style.display = 'flex';
@@ -640,6 +740,7 @@
     sortProbRadio.type = 'radio';
     sortProbRadio.name = 'sortOption';
     sortProbRadio.value = 'prob';
+    sortProbRadio.checked = false;
     probContainer.appendChild(sortProbRadio);
 
     const DistanceContainer = document.createElement('div');
@@ -673,6 +774,7 @@
     sortCoeffRadio.type = 'radio';
     sortCoeffRadio.name = 'sortOption';
     sortCoeffRadio.value = 'distance';
+    sortCoeffRadio.checked = false;
     CoeffsortCointainer.appendChild(sortCoeffRadio);
 
 
@@ -776,8 +878,8 @@
             let key = `${cell.x},${cell.y}`;
             let prevCell = previousScan.get(key);
             if (prevCell) {
-                let countCurrent = parseInt(cell.count);
-                let countPrev = parseInt(prevCell.count);
+                let countCurrent = parseFloat(cell.count);
+                let countPrev = parseFloat(prevCell.count);
                 let probCurrent = parseFloat(cell.prob);
                 let probPrev = parseFloat(prevCell.prob);
                 let sduPrev = parseFloat(prevCell.sdu);
@@ -839,9 +941,6 @@
         previousScan = newScan;
     }
 
-
-
-
     function scanData() {
         const elements = document.querySelectorAll('.sector_sdu_txt');
         const data = [];
@@ -877,7 +976,7 @@
 
     function filterData(data) {
         if (DistanceLimitcheckbox.checked) {
-            maxdistanceFromSB = parseInt(maxDistancefromSBTxt.value);
+            maxdistanceFromSB = parseFloat(maxDistancefromSBTxt.value);
         } else {
             maxdistanceFromSB = maxDistancefromSB_valore_iniziale;
         }
@@ -892,11 +991,11 @@
         // Filtra i dati per includere solo i settori entro maxDistance dalla starbase
         const dati_filtrati_dist_fleet = data.filter(item => {
             const distanceFromFleet = calculateDistance(currentX, currentY, item.x, item.y);
-            return distanceFromFleet <= parseInt(maxareaFromFleetTxt.value);
+            return distanceFromFleet <= parseFloat(maxareaFromFleetTxt.value);
         });
 
         // Trova il valore della cella più bassa
-        const minProb = Math.min(...dati_filtrati_dist_fleet.map(item => parseInt(item.prob)));
+        const minProb = Math.min(...dati_filtrati_dist_fleet.map(item => parseFloat(item.prob)));
 
         dati_filtrati_dist_fleet.forEach(item => {
             const { x, y } = item;
@@ -998,23 +1097,23 @@
         const bestArea = findBestArea(data);
         cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
         cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
-        probAreaTxt.value = bestArea ? parseInt(bestArea.avgProb).toString() : 'N/A';
+        probAreaTxt.value = bestArea ? parseFloat(bestArea.avgProb).toString() : 'N/A';
 
-        let bestclose1 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt1.value), coeffcheckbox1.checked);
+        let bestclose1 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt1.value), coeffcheckbox1.checked);
         if (bestclose1 !== null) {
             probCellaTxt1.value = parseInt(bestclose1.prob).toString();// + '%';
             percCoordxTxt1.value = bestclose1 ? `${bestclose1.x}` : 'N/A';// bestclose1.x;
             percCoordyTxt1.value = bestclose1 ? `${bestclose1.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
 
-        let bestclose2 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt2.value), coeffcheckbox2.checked);
+        let bestclose2 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt2.value), coeffcheckbox2.checked);
         if (bestclose2 !== null) {
             probCellaTxt2.value = parseInt(bestclose2.prob).toString();// + '%';
             percCoordxTxt2.value = bestclose2 ? `${bestclose2.x}` : 'N/A';// bestclose2.x;
             percCoordyTxt2.value = bestclose2 ? `${bestclose2.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
 
-        let bestclose3 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt3.value), coeffcheckbox3.checked);
+        let bestclose3 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt3.value), coeffcheckbox3.checked);
         if (bestclose3 !== null) {
             probCellaTxt3.value = parseInt(bestclose3.prob).toString();// + '%';
             percCoordxTxt3.value = bestclose3 ? `${bestclose3.x}` : 'N/A';// bestclose3.x;
@@ -1102,7 +1201,7 @@
             [starbaseX, starbaseY] = starbaseInputcoords;
         }
 
-        const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${fleetName}"]`);
+        const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${nome_flotta__valore_iniziale}"]`);
         if (fleetRow) {
             const stateRow = fleetRow.closest('tr').nextElementSibling;
             const tdElement = stateRow.querySelector('#fleet_selected_state');
@@ -1152,7 +1251,7 @@
                     let distanza_calc_fuel = fuel > 40
                         ? maxDistancefromSB_valore_iniziale
                         : Math.max(10, Math.floor((fuel / 40) * maxDistancefromSB_valore_iniziale));
-                    let distanza_flotta = parseInt(calculateDistance(currentX, currentY, starbaseX, starbaseY));
+                    let distanza_flotta = parseFloat(calculateDistance(currentX, currentY, starbaseX, starbaseY));
                     if (distanza_calc_fuel < distanza_flotta) {
                         maxDistancefromSBTxt.value = distanza_flotta;
                     } else {
@@ -1196,4 +1295,6 @@
         probCellaTxt.style.backgroundColor = color; // Colore di sfondo giallo
         probAreaTxt.style.backgroundColor = color; // Colore di sfondo giallo
     }
+
+
 })();
