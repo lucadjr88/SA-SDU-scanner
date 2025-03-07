@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V12.9
+// @name         SDU Scanner V13
 // @namespace    http://tampermonkey.net/
-// @version      12.9
+// @version      13
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -10,7 +10,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V12.9 by lucadjr';
+    let titolo = 'SDU Scanner V13 by lucadjr';
     let currentX = 0, currentY = 0;
     let fleetName = 'My Fleet';
     let selectedColor = 'yellow';
@@ -22,6 +22,7 @@
     let maxDistancefromSB_valore_iniziale = 30;
     let starbaseX = 0;
     let starbaseY = 0;
+
 
     function makeDraggable(el) {
         el.style.position = 'absolute';
@@ -600,7 +601,7 @@
     IncidenzaCountTxt.min = '0';
     IncidenzaCountTxt.max = '1'; // Limita il numero massimo a 99
     IncidenzaCountTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
-    IncidenzaCountTxt.value = '0.4';
+    IncidenzaCountTxt.value = '0.6';
     IncidenzaCountTxt.size = '2'; // Limita l'input a due cifre
     IncidenzaCountTxt.style.padding = '5px';
     IncidenzaCountTxt.addEventListener('input', (e) => {
@@ -618,7 +619,7 @@
     IncidenzaSduTxt.min = '0';
     IncidenzaSduTxt.max = '1'; // Limita il numero massimo a 99
     IncidenzaSduTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
-    IncidenzaSduTxt.value = '0.2';
+    IncidenzaSduTxt.value = '0.3';
     IncidenzaSduTxt.size = '2'; // Limita l'input a due cifre
     IncidenzaSduTxt.style.padding = '5px';
     IncidenzaSduTxt.addEventListener('input', (e) => {
@@ -687,7 +688,7 @@
     container.appendChild(button);
 
     const tablecontainer = document.createElement('div');
-    tablecontainer.style.maxHeight = '60px'; // Imposta l'altezza massima
+    tablecontainer.style.maxHeight = '250px'; // Imposta l'altezza massima
     tablecontainer.style.overflowY = 'auto';  // Aggiunge lo scroll verticale
     tablecontainer.style.border = '1px solid black'; // Solo per debug
     tablecontainer.style.width = '100%';  // Per evitare overflow orizzontale
@@ -732,7 +733,7 @@
             button.textContent = 'Avvia Scansione Automatica';
             button.style.backgroundColor = 'green';
         } else {
-            intervalId = setInterval(scanData, 2000);
+            intervalId = setInterval(main_loop, 2000);
             button.textContent = 'Arresta Scansione Automatica';
             button.style.backgroundColor = 'red';
         }
@@ -741,21 +742,118 @@
     let intervalId = null;
     button.addEventListener('click', toggleScan);
 
-    let savedCells = new Map(); // Memorizza le celle vicine con chiave "x,y"
+    let previousScan = new Map();
+    let filtered_data = [];
+
+    function main_loop() {
+        updateFleetPosition();
+        const celle_pagina = scanData();
+
+        filtered_data = filterData(celle_pagina);
+        let bestclose = update_celle(filtered_data);
+
+        // Aggiunta delle celle mancanti dalla scansione precedente
+        filtered_data = mergeWithPreviousScan(filtered_data);
+
+        // Ordinamento
+        if (sortProbRadio.checked) {
+            filtered_data.sort((a, b) => parseInt(b.prob) - parseInt(a.prob));
+        } else if (sortDistanceRadio.checked) {
+            filtered_data.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+        } else {
+            filtered_data.sort((a, b) => parseFloat(b.coeff) - parseFloat(a.coeff));
+        }
+        updateTable(filtered_data, bestclose);
+
+        // Salva l'attuale scansione per il confronto con la successiva
+        updatePreviousScan(filtered_data);
+    }
+
+    function mergeWithPreviousScan(currentData) {
+        let mergedData = new Map();
+
+        currentData.forEach(cell => {
+            let key = `${cell.x},${cell.y}`;
+            let prevCell = previousScan.get(key);
+            if (prevCell) {
+                let countCurrent = parseInt(cell.count);
+                let countPrev = parseInt(prevCell.count);
+                let probCurrent = parseFloat(cell.prob);
+                let probPrev = parseFloat(prevCell.prob);
+                let sduPrev = parseFloat(prevCell.sdu);
+
+                if (countCurrent > countPrev) {
+                    if (probCurrent > probPrev) {
+                        cell.growing = 1;
+                    } else if (probCurrent < probPrev) {
+                        if (sduPrev == 0) {
+                            cell.growing = -1;
+                        } else {
+                            cell.growing = 0;
+                        }
+                    } else {
+                        cell.growing = 0;
+                    }
+                } else {
+                    // Mantieni il valore di growing dalla scansione precedente
+                    cell.growing = prevCell.growing;
+                }
+            } else {
+                cell.growing = 0;
+            }
+            mergedData.set(key, cell);
+        });
+
+        // Aggiunge le celle mancanti dalla scansione precedente
+        previousScan.forEach((prevCell, key) => {
+            if (!mergedData.has(key)) {
+                let clonedCell = { ...prevCell }; // Cloniamo per sicurezza
+                clonedCell.distance = calculateDistance(currentX, currentY, clonedCell.x, clonedCell.y);
+                clonedCell.sdu = 0;
+                clonedCell.count = 0;
+                mergedData.set(key, clonedCell);
+            }
+        });
+
+        return Array.from(mergedData.values());
+    }
+
+
+    function updatePreviousScan(filtered_data) {
+        let newScan = new Map();
+
+        filtered_data.forEach(cell => {
+            let key = `${cell.x},${cell.y}`;
+            let prevCell = previousScan.get(key);
+
+            if (prevCell) {
+                // Manteniamo il valore di growing SOLO SE la cella esisteva prima
+                if (cell.growing === undefined) {
+                    cell.growing = prevCell.growing;
+                }
+            }
+
+            newScan.set(key, { ...cell });
+        });
+
+        previousScan = newScan;
+    }
+
+
+
 
     function scanData() {
-        updateFleetPosition();
         const elements = document.querySelectorAll('.sector_sdu_txt');
         const data = [];
-        const existingSectors = new Set();
+        //const existingSectors = new Set();
 
         elements.forEach(el => {
             const prob = el.textContent.trim();
             if (prob !== '0%' && prob !== '') {
                 const idParts = el.id.split('_');
-                const x = parseFloat(idParts[idParts.length - 2]);
-                const y = parseFloat(idParts[idParts.length - 1]);
-                existingSectors.add(`${x},${y}`);
+                const x = parseInt(idParts[idParts.length - 2]);
+                const y = parseInt(idParts[idParts.length - 1]);
+                //existingSectors.add(`${x},${y}`);
 
                 const rectId = `sector_sdu_${x}_${y}`;
                 const rectElement = document.getElementById(rectId);
@@ -768,38 +866,13 @@
                 const distance = calculateDistance(currentX, currentY, x, y);
                 const coeff = calculateCoeff(prob, count, sdu);
 
-                const cellData = { coeff, prob, x, y, distance, count, sdu, time: timeOnly };
-
-                // Se la distanza è <= 2, salviamo la cella
-                if (distance <= 2) {
-                    savedCells.set(`${x},${y}`, cellData);
-                }
-
+                const growing = 0;
+                const cellData = { coeff, prob, x, y, distance, count, sdu, time: timeOnly, growing };
                 data.push(cellData);
             }
         });
 
-        // Uniamo i dati salvati con i nuovi dati
-        savedCells.forEach((value, key) => {
-            if (!existingSectors.has(key)) {
-                // Ricalcola la distanza con i valori attuali
-                value.distance = calculateDistance(currentX, currentY, value.x, value.y);
-                data.push(value);
-            }
-        });
-
-        // Ordinamento
-        if (sortProbRadio.checked) {
-            data.sort((a, b) => parseFloat(b.prob) - parseFloat(a.prob));
-        } else if (sortDistanceRadio.checked) {
-            data.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-        } else {
-            data.sort((a, b) => parseFloat(b.coeff) - parseFloat(a.coeff));
-        }
-
-        let filtered_data = filterData(data);
-        let bestclose = update_celle(filtered_data);
-        updateTable(filtered_data, bestclose);
+        return data;
     }
 
     function filterData(data) {
@@ -823,7 +896,7 @@
         });
 
         // Trova il valore della cella più bassa
-        const minProb = Math.min(...dati_filtrati_dist_fleet.map(item => parseFloat(item.prob)));
+        const minProb = Math.min(...dati_filtrati_dist_fleet.map(item => parseInt(item.prob)));
 
         dati_filtrati_dist_fleet.forEach(item => {
             const { x, y } = item;
@@ -891,7 +964,7 @@
 
         // Troviamo i massimi valori di probabilità e coefficiente
         filteredData.forEach(item => {
-            let prob = parseFloat(item.prob);
+            let prob = parseInt(item.prob);
             let coeff = parseFloat(item.coeff);
             if (!isNaN(prob) && prob > maxProbInRange) maxProbInRange = prob;
             if (!isNaN(coeff) && coeff > maxCoeffInRange) maxCoeffInRange = coeff;
@@ -904,7 +977,7 @@
         // Troviamo la cella con il valore massimo e distanza minima
         filteredData.forEach(item => {
             let distance = calculateDistance(currentX, currentY, item.x, item.y);
-            let prob = parseFloat(item.prob);
+            let prob = parseInt(item.prob);
             let coeff = parseFloat(item.coeff);
 
             if (!isNaN(prob) && prob === maxProbInRange && distance < minDistanceProb) {
@@ -929,21 +1002,21 @@
 
         let bestclose1 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt1.value), coeffcheckbox1.checked);
         if (bestclose1 !== null) {
-            probCellaTxt1.value = parseFloat(bestclose1.prob).toString();// + '%';
+            probCellaTxt1.value = parseInt(bestclose1.prob).toString();// + '%';
             percCoordxTxt1.value = bestclose1 ? `${bestclose1.x}` : 'N/A';// bestclose1.x;
             percCoordyTxt1.value = bestclose1 ? `${bestclose1.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
-        
+
         let bestclose2 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt2.value), coeffcheckbox2.checked);
         if (bestclose2 !== null) {
-            probCellaTxt2.value = parseFloat(bestclose2.prob).toString();// + '%';
+            probCellaTxt2.value = parseInt(bestclose2.prob).toString();// + '%';
             percCoordxTxt2.value = bestclose2 ? `${bestclose2.x}` : 'N/A';// bestclose2.x;
             percCoordyTxt2.value = bestclose2 ? `${bestclose2.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
-        
+
         let bestclose3 = trovapercentuale(data, parseInt(maxdistanceFromFleetTxt3.value), coeffcheckbox3.checked);
         if (bestclose3 !== null) {
-            probCellaTxt3.value = parseFloat(bestclose3.prob).toString();// + '%';
+            probCellaTxt3.value = parseInt(bestclose3.prob).toString();// + '%';
             percCoordxTxt3.value = bestclose3 ? `${bestclose3.x}` : 'N/A';// bestclose3.x;
             percCoordyTxt3.value = bestclose3 ? `${bestclose3.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
@@ -961,7 +1034,7 @@
                 const y = centerY + dy;
                 const sectorData = data.find(item => item.x === x && item.y === y);
                 if (sectorData) {
-                    totalProb += parseFloat(sectorData.prob);
+                    totalProb += parseInt(sectorData.prob);
                 } else {
                     totalProb += minProb / 2;
                 }
@@ -973,26 +1046,25 @@
     }
 
     function updateTable(data, bestclose) {
-
-        // Aggiorna l'intestazione della tabella con le nuove colonne
         table.innerHTML = `
-                    <tr>
-                        <th style="border-bottom: 1px solid #ccc;">Coeff</th>
-                        <th style="border-bottom: 1px solid #ccc;">Prob (%)</th>
-                        <th style="border-bottom: 1px solid #ccc;">Count</th>
-                        <th style="border-bottom: 1px solid #ccc;">SDU</th>
-                        <th style="border-bottom: 1px solid #ccc;">Distanza</th>
-                        <th style="border-bottom: 1px solid #ccc;">Coords</th>
-                        <th style="border-bottom: 1px solid #ccc;">Time</th>
-                    </tr>
-                `;
-        // Creiamo la tabella e evidenziamo la riga più vicina
+    <tr>
+        <th style="border-bottom: 1px solid #ccc;">Coeff</th>
+        <th style="border-bottom: 1px solid #ccc;">Prob</th>
+        <th style="border-bottom: 1px solid #ccc;">Count</th>
+        <th style="border-bottom: 1px solid #ccc;">SDU</th>
+        <th style="border-bottom: 1px solid #ccc;">Growing</th>
+        <th style="border-bottom: 1px solid #ccc;">Distanza</th>
+        <th style="border-bottom: 1px solid #ccc;">Coords</th>
+        <th style="border-bottom: 1px solid #ccc;">Time</th>
+    </tr>
+`;
         data.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${item.coeff.toFixed(1)}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.prob}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.count}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.sdu}</td>
+                     <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.growing}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.distance}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.x},${item.y}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.time}</td>`;
@@ -1002,11 +1074,19 @@
             if (item.distance == 0 && item.sdu == 1) {
                 row.style.backgroundColor = 'red';
             }
+            if (item.growing == 1) {
+                row.style.color = 'green';
+            } else if (item.growing == -1) {
+                row.style.color = 'brown';
+            } else if (item.growing == 0) {
+                row.style.color = 'black';
+            }
+
             table.appendChild(row);
         });
     }
     function calculateCoeff(prob, count, sdu) {
-        return (parseFloat(prob) / ((parseFloat(count) * incidenza_count) + 1) / ((parseFloat(sdu) * incidenza_sdu) + 1))
+        return (parseInt(prob) / ((parseInt(count) * incidenza_count) + 1) / ((parseInt(sdu) * incidenza_sdu) + 1))
     }
     function calculateDistance(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
