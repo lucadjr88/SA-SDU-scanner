@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V13.1
+// @name         SDU Scanner V13.3
 // @namespace    http://tampermonkey.net/
-// @version      13.1
+// @version      13.3
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -11,13 +11,14 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V13.1 by lucadjr';
+    let titolo = 'SDU Scanner V13.3 by lucadjr';
     let currentX = 0, currentY = 0;
     let selectedColor = 'yellow';
     let fuel = 0;
     let foodValue = 0;
     let incidenza_sdu = 0;
     let incidenza_count = 0;
+    let incidenza_growing = 0;
     let maxdistanceFromSB = Infinity; //limite default
     let starbaseX = 0;
     let starbaseY = 0;
@@ -31,9 +32,19 @@
     let range_cella3__valore_iniziale = 0;
     let range_area_valore_iniziale = 0;
 
-    let coeffcheckbox1_value = true;
-    let coeffcheckbox2_value = true;
-    let coeffcheckbox3_value = false;
+    let coeffcount1_value = false;
+    let coeffcount2_value = false;
+    let coeffcount3_value = false;
+    let coeffsdu1_value = false;
+    let coeffsdu2_value = false;
+    let coeffsdu3_value = false;
+    let coeffgrowing1_value = false;
+    let coeffgrowing2_value = false;
+    let coeffgrowing3_value = false;
+
+    let sortProbRadio_value = true;
+    let sortDistanceRadio_value = false;
+    let sortCoeffRadio_value = false;
 
     function salva_parametri() {
         // Esegui altre azioni basate su questi parametri
@@ -50,10 +61,22 @@
 
             incidenza_sdu: incidenza_sdu,
             incidenza_count: incidenza_count,
+            incidenza_growing: incidenza_growing,
 
-            coeffcheckbox1_value: coeffcheckbox1_value,
-            coeffcheckbox2_value: coeffcheckbox2_value,
-            coeffcheckbox3_value: coeffcheckbox3_value
+            coeffcount1_value: coeffcount1_value,
+            coeffcount2_value: coeffcount2_value,
+            coeffcount3_value: coeffcount3_value,
+            coeffsdu1_value: coeffsdu1_value,
+            coeffsdu2_value: coeffsdu2_value,
+            coeffsdu3_value: coeffsdu3_value,
+            coeffgrowing1_value: coeffgrowing1_value,
+            coeffgrowing2_value: coeffgrowing2_value,
+            coeffgrowing3_value: coeffgrowing3_value,
+
+            
+            sortProbRadio_value: sortProbRadio_value,
+            sortDistanceRadio_value: sortDistanceRadio_value,
+            sortCoeffRadio_value: sortCoeffRadio_value,
         };
         GM_setValue("parametriSalvati", JSON.stringify(parametriSalvati));
     }
@@ -76,10 +99,22 @@
 
             incidenza_sdu = parametriSalvati.incidenza_sdu || 0;
             incidenza_count = parametriSalvati.incidenza_count || 0;
+            incidenza_growing = parametriSalvati.incidenza_growing || 0;
+
+            coeffcount1_value = parametriSalvati.coeffcount1_value || false;
+            coeffcount2_value = parametriSalvati.coeffcount2_value || false;
+            coeffcount3_value = parametriSalvati.coeffcount3_value || false;
+            coeffsdu1_value = parametriSalvati.coeffsdu1_value || false;
+            coeffsdu2_value = parametriSalvati.coeffsdu2_value || false;
+            coeffsdu3_value = parametriSalvati.coeffsdu3_value || false;
+            coeffgrowing1_value = parametriSalvati.coeffgrowing1_value || false;
+            coeffgrowing2_value = parametriSalvati.coeffgrowing2_value || false;
+            coeffgrowing3_value = parametriSalvati.coeffgrowing3_value || false;
+
             
-            coeffcheckbox1_value = parametriSalvati.coeffcheckbox1_value || true;
-            coeffcheckbox2_value = parametriSalvati.coeffcheckbox2_value || true;
-            coeffcheckbox3_value = parametriSalvati.coeffcheckbox3_value || false;
+            sortProbRadio_value = parametriSalvati.sortProbRadio_value || true;
+            sortDistanceRadio_value = parametriSalvati.sortDistanceRadio_value || false;
+            sortCoeffRadio_value = parametriSalvati.sortCoeffRadio_value || false;
         }
     }
 
@@ -129,7 +164,7 @@
     container.style.border = '1px solid #ccc';
     container.style.borderRadius = '5px';
     container.style.width = '400px';
-    container.style.maxHeight = '700px';
+    container.style.maxHeight = '750px';
     //container.style.border = '1px solid black'; // Aggiungi questa linea
     document.body.appendChild(container);
     makeDraggable(container);
@@ -379,15 +414,35 @@
     coeffcheckLabel1.style.marginBottom = '5px'; // Spazio sotto l'etichetta
     coeffcheckContainer1.appendChild(coeffcheckLabel1);
 
-    const coeffcheckbox1 = document.createElement('input');
-    coeffcheckbox1.type = 'checkbox';
-    coeffcheckbox1.name = 'coeffcheckbox1';
-    coeffcheckbox1.checked = coeffcheckbox1_value;
-    coeffcheckbox1.addEventListener('change', function () {
-        coeffcheckbox1_value = coeffcheckbox1.checked;
+    const coeffcount1 = document.createElement('input');
+    coeffcount1.type = 'checkbox';
+    coeffcount1.name = 'coeffcount1';
+    coeffcount1.checked = coeffcount1_value;
+    coeffcount1.addEventListener('change', function (e) {
+        coeffcount1_value = e.target.checked;
         salva_parametri();
     });
-    coeffcheckContainer1.appendChild(coeffcheckbox1);
+    coeffcheckContainer1.appendChild(coeffcount1);
+
+    const coeffsdu1 = document.createElement('input');
+    coeffsdu1.type = 'checkbox';
+    coeffsdu1.name = 'coeffsdu1';
+    coeffsdu1.checked = coeffsdu1_value;
+    coeffsdu1.addEventListener('change', function (e) {
+        coeffsdu1_value = e.target.checked;
+        salva_parametri();
+    });
+    coeffcheckContainer1.appendChild(coeffsdu1);
+
+    const coeffgrowing1 = document.createElement('input');
+    coeffgrowing1.type = 'checkbox';
+    coeffgrowing1.name = 'coeffgrowing1';
+    coeffgrowing1.checked = coeffgrowing1_value;
+    coeffgrowing1.addEventListener('change', function (e) {
+        coeffgrowing1_value = e.target.checked;
+        salva_parametri();
+    });
+    coeffcheckContainer1.appendChild(coeffgrowing1);
 
     const distpercContainer1 = document.createElement('div');
     distpercContainer1.style.display = 'flex';
@@ -460,15 +515,35 @@
     coeffcheckLabel2.style.marginBottom = '5px'; // Spazio sotto l'etichetta
     coeffcheckContainer2.appendChild(coeffcheckLabel2);
 
-    const coeffcheckbox2 = document.createElement('input');
-    coeffcheckbox2.type = 'checkbox';
-    coeffcheckbox2.name = 'coeffcheckbox2';
-    coeffcheckbox2.checked = coeffcheckbox2_value;
-    coeffcheckbox2.addEventListener('change', function () {
-        coeffcheckbox2_value = coeffcheckbox2.checked;
+    const coeffcount2 = document.createElement('input');
+    coeffcount2.type = 'checkbox';
+    coeffcount2.name = 'coeffcount2';
+    coeffcount2.checked = coeffcount2_value;
+    coeffcount2.addEventListener('change', function (e) {
+        coeffcount2_value = e.target.checked;
         salva_parametri();
     });
-    coeffcheckContainer2.appendChild(coeffcheckbox2);
+    coeffcheckContainer2.appendChild(coeffcount2);
+
+    const coeffsdu2 = document.createElement('input');
+    coeffsdu2.type = 'checkbox';
+    coeffsdu2.name = 'coeffsdu2';
+    coeffsdu2.checked = coeffsdu2_value;
+    coeffsdu2.addEventListener('change', function () {
+        coeffsdu2_value = coeffsdu2.checked;
+        salva_parametri();
+    });
+    coeffcheckContainer2.appendChild(coeffsdu2);
+
+    const coeffgrowing2 = document.createElement('input');
+    coeffgrowing2.type = 'checkbox';
+    coeffgrowing2.name = 'coeffgrowing2';
+    coeffgrowing2.checked = coeffgrowing2_value;
+    coeffgrowing2.addEventListener('change', function (e) {
+        coeffgrowing2_value = e.target.checked;
+        salva_parametri();
+    });
+    coeffcheckContainer2.appendChild(coeffgrowing2);
 
     const distpercContainer2 = document.createElement('div');
     distpercContainer2.style.display = 'flex';
@@ -541,15 +616,35 @@
     coeffcheckLabel3.style.marginBottom = '5px'; // Spazio sotto l'etichetta
     coeffcheckContainer3.appendChild(coeffcheckLabel3);
 
-    const coeffcheckbox3 = document.createElement('input');
-    coeffcheckbox3.type = 'checkbox';
-    coeffcheckbox3.name = 'coeffcheckbox2';
-    coeffcheckbox3.checked = coeffcheckbox3_value;
-    coeffcheckbox3.addEventListener('change', function () {
-        coeffcheckbox3_value = coeffcheckbox3.checked;
+    const coeffcount3 = document.createElement('input');
+    coeffcount3.type = 'checkbox';
+    coeffcount3.name = 'coeffcount2';
+    coeffcount3.checked = coeffcount3_value;
+    coeffcount3.addEventListener('change', function (e) {
+        coeffcount3_value = e.target.checked;
         salva_parametri();
     });
-    coeffcheckContainer3.appendChild(coeffcheckbox3);
+    coeffcheckContainer3.appendChild(coeffcount3);
+
+    const coeffsdu3 = document.createElement('input');
+    coeffsdu3.type = 'checkbox';
+    coeffsdu3.name = 'coeffsdu3';
+    coeffsdu3.checked = coeffsdu3_value;
+    coeffsdu3.addEventListener('change', function (e) {
+        coeffsdu3_value = coeffsdu3.checked;
+        salva_parametri();
+    });
+    coeffcheckContainer3.appendChild(coeffsdu3);
+
+    const coeffgrowing3 = document.createElement('input');
+    coeffgrowing3.type = 'checkbox';
+    coeffgrowing3.name = 'coeffgrowing3';
+    coeffgrowing3.checked = coeffgrowing3_value;
+    coeffgrowing3.addEventListener('change', function (e) {
+        coeffgrowing3_value = e.target.checked;
+        salva_parametri();
+    });
+    coeffcheckContainer3.appendChild(coeffgrowing3);
 
     const distpercContainer3 = document.createElement('div');
     distpercContainer3.style.display = 'flex';
@@ -724,7 +819,24 @@
     });
     percCoordContainer.appendChild(IncidenzaSduTxt);
 
+    const IncidenzaGrowingLabel = document.createElement('label');
+    IncidenzaGrowingLabel.textContent = 'Inc. growing';
+    percCoordContainer.appendChild(IncidenzaGrowingLabel);
 
+    const IncidenzaGrowingTxt = document.createElement('input');
+    IncidenzaGrowingTxt.name = 'IncidenzaGrowingTxt';
+    IncidenzaGrowingTxt.type = 'number';
+    IncidenzaGrowingTxt.min = '0';
+    IncidenzaGrowingTxt.max = '1'; // Limita il numero massimo a 99
+    IncidenzaGrowingTxt.step = '0.1'; // Incrementa o diminuisce di 0.1
+    IncidenzaGrowingTxt.value = incidenza_growing;
+    IncidenzaGrowingTxt.size = '2'; // Limita l'input a due cifre
+    IncidenzaGrowingTxt.style.padding = '5px';
+    IncidenzaGrowingTxt.addEventListener('input', (e) => {
+        incidenza_growing = parseFloat(e.target.value);
+        salva_parametri();
+    });
+    percCoordContainer.appendChild(IncidenzaGrowingTxt);
 
     const probContainer = document.createElement('div');
     probContainer.style.display = 'flex';
@@ -738,9 +850,16 @@
 
     const sortProbRadio = document.createElement('input');
     sortProbRadio.type = 'radio';
-    sortProbRadio.name = 'sortOption';
-    sortProbRadio.value = 'prob';
-    sortProbRadio.checked = false;
+    sortProbRadio.name = 'sortRadio';
+    sortProbRadio.checked = sortProbRadio_value;
+    sortProbRadio.addEventListener('change', function () {
+        if (sortProbRadio.checked) {
+            sortProbRadio_value = true;
+            sortDistanceRadio_value = false;
+            sortCoeffRadio_value = false;
+        }
+        salva_parametri();
+    });
     probContainer.appendChild(sortProbRadio);
 
     const DistanceContainer = document.createElement('div');
@@ -755,9 +874,16 @@
 
     const sortDistanceRadio = document.createElement('input');
     sortDistanceRadio.type = 'radio';
-    sortDistanceRadio.name = 'sortOption';
-    sortDistanceRadio.checked = true;
-    sortDistanceRadio.value = 'distance';
+    sortDistanceRadio.name = 'sortRadio';
+    sortDistanceRadio.checked = sortDistanceRadio_value;
+    sortDistanceRadio.addEventListener('change', function () {
+        if (sortDistanceRadio.checked) {
+            sortDistanceRadio_value = true;
+            sortProbRadio_value = false;
+            sortCoeffRadio_value = false;
+        }
+        salva_parametri();
+    });
     DistanceContainer.appendChild(sortDistanceRadio);
 
     const CoeffsortCointainer = document.createElement('div');
@@ -772,9 +898,16 @@
 
     const sortCoeffRadio = document.createElement('input');
     sortCoeffRadio.type = 'radio';
-    sortCoeffRadio.name = 'sortOption';
-    sortCoeffRadio.value = 'distance';
-    sortCoeffRadio.checked = false;
+    sortCoeffRadio.name = 'sortRadio';
+    sortCoeffRadio.checked = sortCoeffRadio_value;
+    sortCoeffRadio.addEventListener('change', function () {
+        if (sortCoeffRadio.checked) {
+            sortCoeffRadio_value = true;
+            sortProbRadio_value = false;
+            sortDistanceRadio_value = false;
+        }
+        salva_parametri();
+    });
     CoeffsortCointainer.appendChild(sortCoeffRadio);
 
 
@@ -893,9 +1026,9 @@
                         } else {
                             cell.growing = 0;
                         }
-                    } else {
-                        cell.growing = 0;
-                    }
+                    } //else {
+                    //    cell.growing = 0;
+                    //}
                 } else {
                     // Mantieni il valore di growing dalla scansione precedente
                     cell.growing = prevCell.growing;
@@ -903,6 +1036,7 @@
             } else {
                 cell.growing = 0;
             }
+            cell.coeff = calculateCoeff(cell.prob, cell.count, cell.sdu, cell.growing);
             mergedData.set(key, cell);
         });
 
@@ -963,10 +1097,12 @@
                 const timeOnly = time.split(' ')[1] || 'N/A';
 
                 const distance = calculateDistance(currentX, currentY, x, y);
-                const coeff = calculateCoeff(prob, count, sdu);
-
                 const growing = 0;
-                const cellData = { coeff, prob, x, y, distance, count, sdu, time: timeOnly, growing };
+                
+                //const coeff = calculateCoeff(item.prob, item.count, item.sdu, item.growing);
+            
+                //const cellData = {coeff, prob, x, y, distance, count, sdu, time: timeOnly, growing };
+                const cellData = {prob, x, y, distance, count, sdu, time: timeOnly, growing };
                 data.push(cellData);
             }
         });
@@ -1020,7 +1156,7 @@
                         const y = bestArea.y + dy;
                         const sectorData = data.find(item => item.x === x && item.y === y);
                         if (sectorData) {
-                            const coeff = calculateCoeff(sectorData.prob, sectorData.count, sectorData.sdu);
+                            const coeff = calculateCoeff(sectorData.prob, sectorData.count, sectorData.sdu, sectorData.growing);
 
                             // Calcola la distanza tra la cella corrente e currentX, currentY
                             const distanceToCurrent = calculateDistance(currentX, currentY, x, y);
@@ -1044,7 +1180,7 @@
 
         return bestCell;
     }
-    function trovapercentuale(data, maxdistance, coeffchecked) {
+    function trovapercentuale(data, maxdistance, coeffcountchecked, coeffsduchecked, coeffgrowingchecked) {
         let maxProbInRange = -1;
         let maxCoeffInRange = -1;
         let closestToMaxProb = null;
@@ -1063,9 +1199,21 @@
 
         // Troviamo i massimi valori di probabilità e coefficiente
         filteredData.forEach(item => {
-            let prob = parseInt(item.prob);
-            let coeff = parseFloat(item.coeff);
-            if (!isNaN(prob) && prob > maxProbInRange) maxProbInRange = prob;
+            let inc_count = parseFloat(IncidenzaCountTxt.value);
+            let inc_sdu = parseFloat(IncidenzaSduTxt.value);
+            let inc_growing = parseFloat(IncidenzaGrowingTxt.value);
+            if (!coeffcountchecked) {
+                inc_count = 0;
+            }
+            if (!coeffsduchecked) {
+                inc_sdu = 0;
+            }
+            if (!coeffgrowingchecked) {
+                inc_growing = 0;
+            }
+            //let coeff= ((parseInt(item.prob) / ((parseInt(item.count) * inc_count) + 1) / ((parseInt(item.sdu) * inc_sdu) + 1))) / (1 + (parseFloat(item.growing) * inc_growing));
+            let coeff= (parseInt(item.prob)*(((1+parseInt(item.growing)) * incidenza_growing) + 1)) / ((parseInt(item.count) * incidenza_count) + 1) / ((parseInt(item.sdu) * incidenza_sdu) + 1) ;
+            item.coeff = coeff;
             if (!isNaN(coeff) && coeff > maxCoeffInRange) maxCoeffInRange = coeff;
         });
 
@@ -1076,13 +1224,7 @@
         // Troviamo la cella con il valore massimo e distanza minima
         filteredData.forEach(item => {
             let distance = calculateDistance(currentX, currentY, item.x, item.y);
-            let prob = parseInt(item.prob);
             let coeff = parseFloat(item.coeff);
-
-            if (!isNaN(prob) && prob === maxProbInRange && distance < minDistanceProb) {
-                minDistanceProb = distance;
-                closestToMaxProb = item;
-            }
 
             if (!isNaN(coeff) && coeff === maxCoeffInRange && distance < minDistanceCoeff) {
                 minDistanceCoeff = distance;
@@ -1091,7 +1233,7 @@
         });
 
 
-        return coeffchecked ? closestToMaxCoeff : closestToMaxProb;
+        return closestToMaxCoeff;
     }
     function update_celle(data) {
         const bestArea = findBestArea(data);
@@ -1099,21 +1241,21 @@
         cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
         probAreaTxt.value = bestArea ? parseFloat(bestArea.avgProb).toString() : 'N/A';
 
-        let bestclose1 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt1.value), coeffcheckbox1.checked);
+        let bestclose1 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt1.value), coeffcount1.checked, coeffsdu1.checked, coeffgrowing1.checked);
         if (bestclose1 !== null) {
             probCellaTxt1.value = parseInt(bestclose1.prob).toString();// + '%';
             percCoordxTxt1.value = bestclose1 ? `${bestclose1.x}` : 'N/A';// bestclose1.x;
             percCoordyTxt1.value = bestclose1 ? `${bestclose1.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
 
-        let bestclose2 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt2.value), coeffcheckbox2.checked);
+        let bestclose2 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt2.value), coeffcount2.checked, coeffsdu2.checked, coeffgrowing2.checked);
         if (bestclose2 !== null) {
             probCellaTxt2.value = parseInt(bestclose2.prob).toString();// + '%';
             percCoordxTxt2.value = bestclose2 ? `${bestclose2.x}` : 'N/A';// bestclose2.x;
             percCoordyTxt2.value = bestclose2 ? `${bestclose2.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
 
-        let bestclose3 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt3.value), coeffcheckbox3.checked);
+        let bestclose3 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt3.value), coeffcount3.checked, coeffsdu3.checked, coeffgrowing3.checked);
         if (bestclose3 !== null) {
             probCellaTxt3.value = parseInt(bestclose3.prob).toString();// + '%';
             percCoordxTxt3.value = bestclose3 ? `${bestclose3.x}` : 'N/A';// bestclose3.x;
@@ -1158,8 +1300,9 @@
     </tr>
 `;
         data.forEach(item => {
+            const coeff = calculateCoeff(item.prob, item.count, item.sdu, item.growing);
             const row = document.createElement('tr');
-            row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${item.coeff.toFixed(1)}</td>
+            row.innerHTML = `<td style="border-bottom: 1px solid #ccc; text-align: center;">${coeff.toFixed(1)}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.prob}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.count}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.sdu}</td>
@@ -1184,8 +1327,9 @@
             table.appendChild(row);
         });
     }
-    function calculateCoeff(prob, count, sdu) {
-        return (parseInt(prob) / ((parseInt(count) * incidenza_count) + 1) / ((parseInt(sdu) * incidenza_sdu) + 1))
+    function calculateCoeff(prob, count, sdu, growing) {
+        return (parseInt(prob)*(((1+parseInt(growing)) * incidenza_growing) + 1)) / ((parseInt(count) * incidenza_count) + 1) / ((parseInt(sdu) * incidenza_sdu) + 1) ;
+        //return (parseInt(prob) / ((parseInt(count) * incidenza_count) + 1) / ((parseInt(sdu) * incidenza_sdu) + 1) / ((parseInt(growing) * incidenza_growing) + 1));
     }
     function calculateDistance(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
