@@ -1143,7 +1143,7 @@
     
             // Aggiorna l'attributo growing se è passato abbastanza tempo
             if (timeDifference >= tempoGrowingInMs) {
-                item.growing -= 1;
+                item.growing = -1;
             }
     
             // Restituisci solo i dati che sono più recenti di 'tempoMassimoInMs'
