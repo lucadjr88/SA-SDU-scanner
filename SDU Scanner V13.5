@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V13.4
+// @name         SDU Scanner V13.5
 // @namespace    http://tampermonkey.net/
-// @version      13.4
+// @version      13.5
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -11,7 +11,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V13.4 by lucadjr';
+    let titolo = 'SDU Scanner V13.5 by lucadjr';
     let currentX = 0, currentY = 0;
     let selectedColor = 'yellow';
     let fuel = 0;
@@ -999,7 +999,9 @@
         }
         const bestclose = update_celle(dati_filtrati_sb);
         updateTable(dati_filtrati_sb, bestclose);
-           
+
+
+        dati_filtrati_sb = filtra_vecchi(dati_filtrati_sb);
         // Salva l'attuale scansione per il confronto con la successiva
         updatePreviousScan(dati_filtrati_sb);
     }
@@ -1120,6 +1122,35 @@
 
         return filtered_Data;
     }
+    function filtra_vecchi(data) {
+        const tempoGrowingInMs = 30 * 60 * 1000;  // 0.5 ore in millisecondi
+        const tempoMassimoInMs = 1 * 60 * 60 * 1000;  // 1 ora in millisecondi
+    
+        const currentDate = new Date();  // Ottieni l'orario attuale
+    
+        return data.filter(item => {
+            const timeString = item.time;
+    
+            // Converti l'orario UTC (assumendo che item.time sia nel formato HH:mm:ss)
+            const [hours, minutes, seconds] = timeString.split(':').map(Number);
+            const utcDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), hours, minutes, seconds));
+    
+            // Calcola la differenza tra l'orario corrente e l'orario dell'elemento
+            const timeDifference = currentDate - utcDate;
+    
+            // Log per debug
+            //console.log(`Item time: ${timeString}, UTC Date: ${utcDate}, Time Difference: ${timeDifference}`);
+    
+            // Aggiorna l'attributo growing se è passato abbastanza tempo
+            if (timeDifference >= tempoGrowingInMs) {
+                item.growing -= 1;
+            }
+    
+            // Restituisci solo i dati che sono più recenti di 'tempoMassimoInMs'
+            return timeDifference <= tempoMassimoInMs;
+        });
+    }
+    
     function findBestArea(data) {
         let bestArea = null;
         let maxAvgProb = -1;
@@ -1185,34 +1216,42 @@
         const bestArea = findBestArea(data);
         cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
         cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
-        probAreaTxt.value = bestArea ? parseFloat(bestArea.avgProb).toString() : 'N/A';
-        
+
+        if (bestArea) {
+            const avgProb = (parseFloat(bestArea.avgProb)).toFixed(1);
+        probAreaTxt.value = (avgProb).toString();
+        } else {
+            probAreaTxt.value = 'N/A';
+        }
+
+        //probAreaTxt.value = bestArea ? parseFloat(bestArea.avgProb).toString() : 'N/A';
+
         const coeffCount1 = coeffcount1.checked ? 1 : 0;
         const coeffSdu1 = coeffsdu1.checked ? 1 : 0;
         const coeffGrowing1 = coeffgrowing1.checked ? 1 : 0;
-    
+
         const bestclose1 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt1.value), coeffCount1, coeffSdu1, coeffGrowing1);
         if (bestclose1 !== null) {
             probCellaTxt1.value = parseInt(bestclose1.prob).toString();// + '%';
             percCoordxTxt1.value = bestclose1 ? `${bestclose1.x}` : 'N/A';// bestclose1.x;
             percCoordyTxt1.value = bestclose1 ? `${bestclose1.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
-    
+
         const coeffCount2 = coeffcount2.checked ? 1 : 0;
         const coeffSdu2 = coeffsdu2.checked ? 1 : 0;
         const coeffGrowing2 = coeffgrowing2.checked ? 1 : 0;
-    
+
         const bestclose2 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt2.value), coeffCount2, coeffSdu2, coeffGrowing2);
         if (bestclose2 !== null) {
             probCellaTxt2.value = parseInt(bestclose2.prob).toString();// + '%';
             percCoordxTxt2.value = bestclose2 ? `${bestclose2.x}` : 'N/A';// bestclose2.x;
             percCoordyTxt2.value = bestclose2 ? `${bestclose2.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
-    
+
         const coeffCount3 = coeffcount3.checked ? 1 : 0;
         const coeffSdu3 = coeffsdu3.checked ? 1 : 0;
         const coeffGrowing3 = coeffgrowing3.checked ? 1 : 0;
-    
+
         const bestclose3 = trovapercentuale(data, parseFloat(maxdistanceFromFleetTxt3.value), coeffCount3, coeffSdu3, coeffGrowing3);
         if (bestclose3 !== null) {
             probCellaTxt3.value = parseInt(bestclose3.prob).toString();// + '%';
@@ -1225,37 +1264,37 @@
     function trovapercentuale(data, maxdistance, coeffcountchecked, coeffsduchecked, coeffgrowingchecked) {
         let maxCoeffInRange = -1;
         let closestToMaxCoeff = null;
-    
+
         // 🔍 Applichiamo il filtro simile a `findBestArea`
         const filteredData = data.filter(item => {
             const distanzacella = calculateDistance(currentX, currentY, item.x, item.y);
             return distanzacella <= maxdistance;
         });
-    
+
         if (filteredData.length === 0) {
             return null;
         }
-    
+
         // Troviamo i massimi valori di probabilità e coefficiente
         filteredData.forEach(item => {
             const coeff = calculateCoeff(item.prob, item.count, item.sdu, item.growing, coeffcountchecked, coeffsduchecked, coeffgrowingchecked);
             item.coeff = coeff;
             if (!isNaN(coeff) && coeff > maxCoeffInRange) maxCoeffInRange = coeff;
         });
-    
+
         let minDistanceCoeff = Infinity;
-    
+
         // Troviamo la cella con il valore massimo e distanza minima
         filteredData.forEach(item => {
             let distance = calculateDistance(currentX, currentY, item.x, item.y);
             let coeff = parseFloat(item.coeff);
-    
+
             if (!isNaN(coeff) && coeff === maxCoeffInRange && distance < minDistanceCoeff) {
                 minDistanceCoeff = distance;
                 closestToMaxCoeff = item;
             }
         });
-    
+
         return closestToMaxCoeff;
     }
 
@@ -1334,7 +1373,7 @@
         if (coeffgrowingchecked != 1) {
             inc_growing = 0;
         }
-    
+
         const nominatore = parseInt(prob) * ((parseInt(growing) * inc_growing) + 1);
         const denominatore = ((parseInt(count) * inc_count) + 1) * ((parseInt(sdu) * inc_sdu) + 1);
         return nominatore / denominatore;
@@ -1408,7 +1447,7 @@
                     if (distanza_calc_fuel < distanza_flotta) {
                         maxDistancefromSBTxt.value = distanza_flotta;
                     } else {
-                        maxDistancefromSBTxt.value = distanza_calc_fuel
+                        maxDistancefromSBTxt.value = (distanza_calc_fuel).toFixed(0);
                     }
                 }
                 else {
