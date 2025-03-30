@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V13.5
+// @name         SDU Scanner V14
 // @namespace    http://tampermonkey.net/
-// @version      13.5
+// @version      14
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -11,7 +11,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V13.5 by lucadjr';
+    let titolo = 'SDU Scanner V14 by lucadjr';
     let currentX = 0, currentY = 0;
     let selectedColor = 'yellow';
     let fuel = 0;
@@ -41,6 +41,10 @@
     let coeffgrowing1_value = false;
     let coeffgrowing2_value = false;
     let coeffgrowing3_value = false;
+
+    let coeffareacount_value = false;
+    let coeffareasdu_value = false;
+    let coeffareagrowing_value = false;
 
     let sortProbRadio_value = true;
     let sortDistanceRadio_value = false;
@@ -73,6 +77,9 @@
             coeffgrowing2_value: coeffgrowing2_value,
             coeffgrowing3_value: coeffgrowing3_value,
 
+            coeffareacount_value: coeffareacount_value,
+            coeffareasdu_value: coeffareasdu_value,
+            coeffareagrowing_value: coeffareagrowing_value,
 
             sortProbRadio_value: sortProbRadio_value,
             sortDistanceRadio_value: sortDistanceRadio_value,
@@ -111,6 +118,9 @@
             coeffgrowing2_value = parametriSalvati.coeffgrowing2_value || false;
             coeffgrowing3_value = parametriSalvati.coeffgrowing3_value || false;
 
+            coeffareacount_value = parametriSalvati.coeffareacount_value || false;
+            coeffareasdu_value = parametriSalvati.coeffareasdu_value || false;
+            coeffareagrowing_value = parametriSalvati.coeffareagrowing_value || false;
 
             sortProbRadio_value = parametriSalvati.sortProbRadio_value || true;
             sortDistanceRadio_value = parametriSalvati.sortDistanceRadio_value || false;
@@ -451,8 +461,9 @@
 
     const maxdistanceFromFleetTxt1 = document.createElement('input');
     maxdistanceFromFleetTxt1.type = 'number';
-    maxdistanceFromFleetTxt1.min = '1';
+    maxdistanceFromFleetTxt1.min = '0';
     maxdistanceFromFleetTxt1.max = '99'; // Limita il numero massimo a 99
+    maxdistanceFromFleetTxt1.step = '0.1'; // Incrementa o diminuisce di 0.1
     maxdistanceFromFleetTxt1.value = range_cella1__valore_iniziale;
     maxdistanceFromFleetTxt1.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt1.style.padding = '5px';
@@ -529,8 +540,8 @@
     coeffsdu2.type = 'checkbox';
     coeffsdu2.name = 'coeffsdu2';
     coeffsdu2.checked = coeffsdu2_value;
-    coeffsdu2.addEventListener('change', function () {
-        coeffsdu2_value = coeffsdu2.checked;
+    coeffsdu2.addEventListener('change', function (e) {
+        coeffsdu2_value = e.target.checked;
         salva_parametri();
     });
     coeffcheckContainer2.appendChild(coeffsdu2);
@@ -554,6 +565,7 @@
     maxdistanceFromFleetTxt2.type = 'number';
     maxdistanceFromFleetTxt2.min = '1';
     maxdistanceFromFleetTxt2.max = '99'; // Limita il numero massimo a 99
+    maxdistanceFromFleetTxt2.step = '0.1'; // Incrementa o diminuisce di 0.1
     maxdistanceFromFleetTxt2.value = range_cella2__valore_iniziale;
     maxdistanceFromFleetTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt2.style.padding = '5px';
@@ -588,7 +600,7 @@
     percCoordxTxt2.name = 'cella_x2';
     percCoordxTxt2.size = '2';
     percCoordxTxt2.style.fontSize = '14px';
-    percCoordxTxt2.style.backgroundColor = 'yellow';
+    percCoordxTxt2.style.backgroundColor = 'lightgreen';
     percCoordxTxt2.style.padding = '5px';
     percCoordxTxt2.style.margin = '4px';
     percCoordxTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
@@ -600,7 +612,7 @@
     percCoordyTxt2.name = 'cella_y2';
     percCoordyTxt2.size = '2';
     percCoordyTxt2.style.fontSize = '14px';
-    percCoordyTxt2.style.backgroundColor = 'yellow';
+    percCoordyTxt2.style.backgroundColor = 'lightgreen';
     percCoordyTxt2.style.padding = '5px';
     percCoordyTxt2.style.margin = '4px';
     percCoordyTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
@@ -618,7 +630,7 @@
 
     const coeffcount3 = document.createElement('input');
     coeffcount3.type = 'checkbox';
-    coeffcount3.name = 'coeffcount2';
+    coeffcount3.name = 'coeffcount3';
     coeffcount3.checked = coeffcount3_value;
     coeffcount3.addEventListener('change', function (e) {
         coeffcount3_value = e.target.checked;
@@ -631,7 +643,7 @@
     coeffsdu3.name = 'coeffsdu3';
     coeffsdu3.checked = coeffsdu3_value;
     coeffsdu3.addEventListener('change', function (e) {
-        coeffsdu3_value = coeffsdu3.checked;
+        coeffsdu3_value = e.target.checked;
         salva_parametri();
     });
     coeffcheckContainer3.appendChild(coeffsdu3);
@@ -655,6 +667,7 @@
     maxdistanceFromFleetTxt3.type = 'number';
     maxdistanceFromFleetTxt3.min = '1';
     maxdistanceFromFleetTxt3.max = '99'; // Limita il numero massimo a 99
+    maxdistanceFromFleetTxt3.step = '0.1'; // Incrementa o diminuisce di 0.1
     maxdistanceFromFleetTxt3.value = range_cella3__valore_iniziale;
     maxdistanceFromFleetTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt3.style.padding = '5px';
@@ -689,7 +702,7 @@
     percCoordxTxt3.name = 'cella_x3';
     percCoordxTxt3.size = '2';
     percCoordxTxt3.style.fontSize = '14px';
-    percCoordxTxt3.style.backgroundColor = 'yellow';
+    percCoordxTxt3.style.backgroundColor = 'lightblue';
     percCoordxTxt3.style.padding = '5px';
     percCoordxTxt3.style.margin = '4px';
     percCoordxTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
@@ -701,7 +714,7 @@
     percCoordyTxt3.name = 'cella_y3';
     percCoordyTxt3.size = '2';
     percCoordyTxt3.style.fontSize = '14px';
-    percCoordyTxt3.style.backgroundColor = 'yellow';
+    percCoordyTxt3.style.backgroundColor = 'lightblue';
     percCoordyTxt3.style.padding = '5px';
     percCoordyTxt3.style.margin = '4px';
     percCoordyTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
@@ -718,6 +731,47 @@
     const AreaLabel = document.createElement('label');
     AreaLabel.textContent = 'max prob area';
     percCoordContainer.appendChild(AreaLabel);
+
+
+    const coeffcheckareaContainer = document.createElement('div');
+    coeffcheckareaContainer.style.display = 'flex';
+    //coeffcheckContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    percCoordContainer.appendChild(coeffcheckareaContainer);
+
+    const coeffcheckareaLabel = document.createElement('label');
+    coeffcheckareaLabel.textContent = 'Coeff for c3';
+    coeffcheckareaLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
+    coeffcheckareaContainer.appendChild(coeffcheckareaLabel);
+
+    const coeffareacount = document.createElement('input');
+    coeffareacount.type = 'checkbox';
+    coeffareacount.name = 'coeffareacount';
+    coeffareacount.checked = coeffareacount_value;
+    coeffareacount.addEventListener('change', function (e) {
+        coeffareacount_value = e.target.checked;
+        salva_parametri();
+    });
+    coeffcheckareaContainer.appendChild(coeffareacount);
+
+    const coeffareasdu = document.createElement('input');
+    coeffareasdu.type = 'checkbox';
+    coeffareasdu.name = 'coeffareasdu';
+    coeffareasdu.checked = coeffareasdu_value;
+    coeffareasdu.addEventListener('change', function (e) {
+        coeffareasdu_value = coeffareasdu.checked;
+        salva_parametri();
+    });
+    coeffcheckareaContainer.appendChild(coeffareasdu);
+
+    const coeffareagrowing = document.createElement('input');
+    coeffareagrowing.type = 'checkbox';
+    coeffareagrowing.name = 'coeffareagrowing';
+    coeffareagrowing.checked = coeffareagrowing_value;
+    coeffareagrowing.addEventListener('change', function (e) {
+        coeffareagrowing_value = e.target.checked;
+        salva_parametri();
+    });
+    coeffcheckareaContainer.appendChild(coeffareagrowing);
 
     const cordAreaContainer1 = document.createElement('div');
     cordAreaContainer1.style.display = 'flex';
@@ -984,11 +1038,11 @@
         updateFleetPosition();
         const celle_pagina = scanData();
 
-        dati_filtrati_sb = filtra_distanza_sb(celle_pagina);
+        //dati_filtrati_sb = filtra_distanza_sb(celle_pagina);
 
         // Aggiunta delle celle mancanti dalla scansione precedente
-        dati_filtrati_sb = mergeWithPreviousScan(dati_filtrati_sb);
-
+        dati_filtrati_sb = mergeWithPreviousScan(celle_pagina);
+        dati_filtrati_sb = filtra_distanza_sb(dati_filtrati_sb);
         // Ordinamento
         if (sortProbRadio.checked) {
             dati_filtrati_sb.sort((a, b) => parseInt(b.prob) - parseInt(a.prob));
@@ -1025,8 +1079,6 @@
                     } else if (probCurrent < probPrev) {
                         if (sduPrev == 0) {
                             cell.growing = -1;
-                        } else {
-                            cell.growing = 0;
                         }
                     } //else {
                     //    cell.growing = 0;
@@ -1084,7 +1136,7 @@
 
         elements.forEach(el => {
             const prob = el.textContent.trim();
-            if (prob !== '0%' && prob !== '') {
+            if (prob !== '') {
                 const idParts = el.id.split('_');
                 const x = parseInt(idParts[idParts.length - 2]);
                 const y = parseInt(idParts[idParts.length - 1]);
@@ -1099,7 +1151,14 @@
                 const timeOnly = time.split(' ')[1] || 'N/A';
 
                 const distance = calculateDistance(currentX, currentY, x, y);
-                const growing = 0;
+
+                const key = `${x},${y}`;
+                const prevCell = previousScan.get(key);
+                let growing = 0;
+                if (prevCell) {
+                    // Manteniamo il valore di growing SOLO SE la cella esisteva prima
+                    growing = prevCell.growing;
+                }
 
                 //const coeff = calculateCoeff(item.prob, item.count, item.sdu, item.growing);
 
@@ -1125,51 +1184,57 @@
     function filtra_vecchi(data) {
         const tempoGrowingInMs = 30 * 60 * 1000;  // 0.5 ore in millisecondi
         const tempoMassimoInMs = 1 * 60 * 60 * 1000;  // 1 ora in millisecondi
-    
+
         const currentDate = new Date();  // Ottieni l'orario attuale
-    
+
         return data.filter(item => {
             const timeString = item.time;
-    
+
             // Converti l'orario UTC (assumendo che item.time sia nel formato HH:mm:ss)
             const [hours, minutes, seconds] = timeString.split(':').map(Number);
             const utcDate = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate(), hours, minutes, seconds));
-    
+
             // Calcola la differenza tra l'orario corrente e l'orario dell'elemento
             const timeDifference = currentDate - utcDate;
-    
+
             // Log per debug
             //console.log(`Item time: ${timeString}, UTC Date: ${utcDate}, Time Difference: ${timeDifference}`);
-    
+
             // Aggiorna l'attributo growing se è passato abbastanza tempo
             if (timeDifference >= tempoGrowingInMs) {
                 item.growing = -1;
             }
-    
+
             // Restituisci solo i dati che sono più recenti di 'tempoMassimoInMs'
             return timeDifference <= tempoMassimoInMs;
         });
     }
-    
+
     function findBestArea(data) {
         let bestArea = null;
-        let maxAvgProb = -1;
+        let maxavgCoeff = -1;
         let bestCell = null;
-        // Filtra i dati per includere solo i settori entro maxDistance dalla starbase
+        // Filtra i dati per includere solo i settori entro maxareaFromFleetTxt
         const dati_filtrati_dist_fleet = data.filter(item => {
             const distanceFromFleet = calculateDistance(currentX, currentY, item.x, item.y);
             return distanceFromFleet <= parseFloat(maxareaFromFleetTxt.value);
         });
 
+
         // Trova il valore della cella più bassa
         const minProb = Math.min(...dati_filtrati_dist_fleet.map(item => parseFloat(item.prob)));
 
+        const coeffcountchecked = coeffareacount.checked ? 1 : 0;
+        const coeffsduchecked = coeffareasdu.checked ? 1 : 0;
+        const coeffgrowingchecked = coeffareagrowing.checked ? 1 : 0;
+
         dati_filtrati_dist_fleet.forEach(item => {
             const { x, y } = item;
-            const avgProb = prob_media_area(x, y, dati_filtrati_dist_fleet, minProb);
-            if (avgProb > maxAvgProb) {
-                maxAvgProb = avgProb;
-                bestArea = { x, y, avgProb };
+
+            const avgCoeff = prob_media_area(x, y, dati_filtrati_dist_fleet, minProb, coeffcountchecked, coeffsduchecked, coeffgrowingchecked);
+            if (avgCoeff > maxavgCoeff) {
+                maxavgCoeff = avgCoeff;
+                bestArea = { x, y, avgCoeff };
             }
         });
 
@@ -1195,7 +1260,7 @@
                             // Se la distanza è la più piccola finora, aggiorna la cella più vicina
                             if (distanceToCurrent < minDistance) {
                                 minDistance = distanceToCurrent;
-                                closestCell = { x, y, coeff, avgProb: bestArea.avgProb, distanceToCurrent };
+                                closestCell = { x, y, coeff, avgCoeff: bestArea.avgCoeff, distanceToCurrent };
                             }
                         }
                     }
@@ -1204,11 +1269,9 @@
                 bestCell = closestCell;  // Aggiorna bestCell per restituire la cella più vicina
 
             } else {
-                bestCell = { x: bestArea.x, y: bestArea.y, coeff: 0, avgProb: bestArea.avgProb, distanceToCurrent: 0 };
+                bestCell = bestArea;
             }
-
         }
-
         return bestCell;
     }
 
@@ -1216,15 +1279,12 @@
         const bestArea = findBestArea(data);
         cordArea_x_Txt.value = bestArea ? `${bestArea.x}` : 'N/A';
         cordArea_y_Txt.value = bestArea ? `${bestArea.y}` : 'N/A';
-
         if (bestArea) {
-            const avgProb = (parseFloat(bestArea.avgProb)).toFixed(1);
-        probAreaTxt.value = (avgProb).toString();
+            const avgCoeff = (parseFloat(bestArea.avgCoeff)).toFixed(1);
+            probAreaTxt.value = (avgCoeff).toString();
         } else {
             probAreaTxt.value = 'N/A';
         }
-
-        //probAreaTxt.value = bestArea ? parseFloat(bestArea.avgProb).toString() : 'N/A';
 
         const coeffCount1 = coeffcount1.checked ? 1 : 0;
         const coeffSdu1 = coeffsdu1.checked ? 1 : 0;
@@ -1258,7 +1318,7 @@
             percCoordxTxt3.value = bestclose3 ? `${bestclose3.x}` : 'N/A';// bestclose3.x;
             percCoordyTxt3.value = bestclose3 ? `${bestclose3.y}` : 'N/A'; // Aggiorniamo il campo di input con le coordinate
         }
-        return bestclose1;
+        return { bestclose1, bestclose2, bestclose3 };
     }
 
     function trovapercentuale(data, maxdistance, coeffcountchecked, coeffsduchecked, coeffgrowingchecked) {
@@ -1298,9 +1358,23 @@
         return closestToMaxCoeff;
     }
 
-    function prob_media_area(centerX, centerY, data, minProb) {
+    function prob_media_area(centerX, centerY, data, minProb, coeffcountchecked, coeffsduchecked, coeffgrowingchecked) {
+        let totalCoeff = 0;
         let totalProb = 0;
         let count = 0;
+
+        let inc_count = parseFloat(IncidenzaCountTxt.value);
+        let inc_sdu = parseFloat(IncidenzaSduTxt.value);
+        let inc_growing = parseFloat(IncidenzaGrowingTxt.value);
+        if (coeffcountchecked != 1) {
+            inc_count = 0;
+        }
+        if (coeffsduchecked != 1) {
+            inc_sdu = 0;
+        }
+        if (coeffgrowingchecked != 1) {
+            inc_growing = 0;
+        }
 
         for (let dx = -2; dx <= 2; dx++) {
             for (let dy = -2; dy <= 2; dy++) {
@@ -1308,15 +1382,20 @@
                 const y = centerY + dy;
                 const sectorData = data.find(item => item.x === x && item.y === y);
                 if (sectorData) {
+                    const nominatore = parseInt(sectorData.prob) * ((parseInt(sectorData.growing) * inc_growing) + 1);
+                    const denominatore = ((parseInt(sectorData.count) * inc_count) + 1) * ((parseInt(sectorData.sdu) * inc_sdu) + 1);
+                    const coeff = nominatore / denominatore;
+                    totalCoeff += coeff
                     totalProb += parseInt(sectorData.prob);
                 } else {
-                    totalProb += minProb / 2;
+                    totalCoeff += minProb;
+                    totalProb += minProb;
                 }
                 count++;
             }
         }
 
-        return count > 0 ? totalProb / count : 0;
+        return count > 0 ? totalCoeff / count : 0;
     }
 
     function updateTable(data, bestclose) {
@@ -1343,9 +1422,18 @@
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.distance}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.x},${item.y}</td>
                      <td style="border-bottom: 1px solid #ccc; text-align: center;">${item.time}</td>`;
-            if (item === bestclose) {
-                row.style.backgroundColor = selectedColor; // Evidenziamo solo la riga più vicina
+
+            if (item === bestclose.bestclose3) {
+                row.style.backgroundColor = 'lightblue';
             }
+            if (item === bestclose.bestclose2) {
+                row.style.backgroundColor = 'lightgreen';
+            }
+            if (item === bestclose.bestclose1) {
+                row.style.backgroundColor = selectedColor;
+            }
+
+
             if (item.distance == 0 && item.sdu == 1) {
                 row.style.backgroundColor = 'red';
             }
@@ -1382,13 +1470,19 @@
     function calculateDistance(x1, y1, x2, y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)).toFixed(2);
     }
+    function areValidCoordinates(coords) {
+        return coords.every(coord => !isNaN(coord));
+    }
+
     function updateFleetPosition() { // e starbase input
         const starbaseInput = SBcoordsTxt.value.trim();
 
         const starbaseInputcoords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
-        if (starbaseInputcoords.length !== 2 || isNaN(starbaseInputcoords[0]) || isNaN(starbaseInputcoords[1])) {
+        if (starbaseInputcoords.length !== 2 || !areValidCoordinates(starbaseInputcoords)) {
             alert("Inserisci le coordinate nel formato corretto: x,y (es. 15,-9)");
-            [starbaseX, starbaseY] = '11,-16';
+            [starbaseX, starbaseY] = [11, -16];
+            toggleScan();
+            return;
         } else {
             [starbaseX, starbaseY] = starbaseInputcoords;
         }
@@ -1407,25 +1501,42 @@
                     );
                     // Prendi l'ultima serie di coordinate
                     const finalCoords = allCoords[allCoords.length - 1];
-                    [currentX, currentY] = finalCoords.split(',').map(coord => parseFloat(coord.trim()));
-                    // Aggiorna il textContent con un messaggio flessibile
-                    const scenarioDescription = tdElement.textContent
-                        .replace(/\s+/g, ' ') // Rimuove spazi multipli
-                        .trim();
-                    currentPosition.textContent = `${scenarioDescription.replace('|', ',')}`;
-                    currentPosition.style.backgroundColor = 'green';
+                    const fleetCoords = finalCoords.split(',').map(coord => parseFloat(coord.trim()));
+                    if (areValidCoordinates(fleetCoords)) {
+                        [currentX, currentY] = fleetCoords;
+                        // Aggiorna il textContent con un messaggio flessibile
+                        const scenarioDescription = tdElement.textContent
+                            .replace(/\s+/g, ' ') // Rimuove spazi multipli
+                            .trim();
+                        currentPosition.textContent = `${scenarioDescription.replace('|', ',')}`;
+                        currentPosition.style.backgroundColor = 'green';
+                    } else {
+                        alert("Le coordinate della flotta non sono valide.");
+                        currentPosition.textContent = 'Posizione attuale: N/A';
+                        currentPosition.style.backgroundColor = 'red';
+                        toggleScan();
+                        return;
+                    }
                 } else {
-                    // Nessuna coordinata trovata
+                    alert("Nessuna coordinata trovata per la flotta.");
                     currentPosition.textContent = 'Posizione attuale: N/A';
                     currentPosition.style.backgroundColor = 'red';
+                    toggleScan();
+                    return;
                 }
             } else {
+                alert("Nessuna coordinata trovata per la flotta.");
                 currentPosition.textContent = 'Posizione attuale: N/A';
                 currentPosition.style.backgroundColor = 'red';
+                toggleScan();
+                return;
             }
         } else {
+            alert("Nessuna coordinata trovata per la flotta.");
             currentPosition.textContent = 'Posizione attuale: N/A';
             currentPosition.style.backgroundColor = 'red';
+            toggleScan();
+            return;
         }
         // Seleziona l'elemento che contiene il titolo
         let fuelBarElement = document.getElementById("fleet_selected_fuel_bar");
@@ -1444,16 +1555,15 @@
                         ? maxDistancefromSB_valore_iniziale
                         : Math.max(10, Math.floor((fuel / 40) * maxDistancefromSB_valore_iniziale));
                     let distanza_flotta = parseFloat(calculateDistance(currentX, currentY, starbaseX, starbaseY));
-                    if (distanza_calc_fuel < distanza_flotta) {
+                    if (distanza_calc_fuel < distanza_flotta-2) {
                         maxDistancefromSBTxt.value = distanza_flotta;
                     } else {
-                        maxDistancefromSBTxt.value = (distanza_calc_fuel).toFixed(0);
+                        maxDistancefromSBTxt.value = distanza_calc_fuel.toFixed(0);
                     }
                 }
                 else {
                     maxDistancefromSBTxt.value = maxDistancefromSB_valore_iniziale;
                 }
-                //maxDistancefromSBTxt.value = fuel > 30 ? 20 : Math.floor((fuel / 30) * 20);
             }
         }
         // Seleziona l'elemento con l'id "fleet_selected_cargo"
