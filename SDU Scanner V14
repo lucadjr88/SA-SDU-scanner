@@ -217,6 +217,7 @@
     headerContainer.appendChild(title);
 
     const currentPosition = document.createElement('div');
+    currentPosition.style.fontSize = '16px';
     currentPosition.textContent = 'Posizione attuale: N/A';
     currentPosition.style.marginBottom = '10px';
     currentPosition.style.backgroundColor = 'red';
