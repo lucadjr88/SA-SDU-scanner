@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V14
+// @name         SDU Scanner V14.6
 // @namespace    http://tampermonkey.net/
-// @version      14
+// @version      14.6
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -11,25 +11,44 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V14 by lucadjr';
+    let titolo = 'SDU Scanner V14.6 by lucadjr';
     let currentX = 0, currentY = 0;
     let selectedColor = 'yellow';
     let fuel = 0;
-    let foodValue = 0;
     let incidenza_sdu = 0;
     let incidenza_count = 0;
     let incidenza_growing = 0;
-    let maxdistanceFromSB = Infinity; //limite default
     let starbaseX = 0;
     let starbaseY = 0;
+    let primaSBx = 0;
+    let primaSBy = 0;
+    let secondaSBx = 0;
+    let secondaSBy = 0;
 
-    let nome_flotta__valore_iniziale = "";
-    let maxDistancefromSB_valore_iniziale = 0;
+    let fleetID = "";
+    let nomeFlotta = "";
+
+    let fleetScantxt = "flotta 1 \nflotta 2";
+
+    let nome_flotta_valore_iniziale = "";
+    let maxDistancefromSB_valore_iniziale = 100; //limite default
+    let maxdistanceFromSB = Infinity; //limite default
     let starbase_valore_iniziale = "";
+    let fuel_range_min_valore_iniziale = 10;
+    let fuel_range_max_valore_iniziale = 40;
+    let prima_SB_valore_iniziale = "11,-16";
+    let seconda_SB_valore_iniziale = "-14,-16";
+    let colore_prima_SB = "#E6E6FA"; /* Lavender */
+    let colore_seconda_SB = "#F5FFFA"; /* Mint Cream */
 
-    let range_cella1__valore_iniziale = 0;
-    let range_cella2__valore_iniziale = 0;
-    let range_cella3__valore_iniziale = 0;
+    let SmartRangecheckbox_value = false;
+    let doublecheckbox_value = false;
+    let ocrcheckbox_value = false;
+
+
+    let range_cella1_valore_iniziale = 0;
+    let range_cella2_valore_iniziale = 0;
+    let range_cella3_valore_iniziale = 0;
     let range_area_valore_iniziale = 0;
 
     let coeffcount1_value = false;
@@ -50,119 +69,16 @@
     let sortDistanceRadio_value = false;
     let sortCoeffRadio_value = false;
 
-    function salva_parametri() {
-        // Esegui altre azioni basate su questi parametri
-        // Se non ci sono parametri salvati, creiamo e salviamo un oggetto predefinito
-        let parametriSalvati = {
-            nome_flotta__valore_iniziale: nome_flotta__valore_iniziale,
-            maxDistancefromSB_valore_iniziale: maxDistancefromSB_valore_iniziale,
-            starbase_valore_iniziale: starbase_valore_iniziale,
+    let subwarpSpeed = 0;
+    let scanCooldown = 0;
+    let sduxScan = 0;
 
-            range_cella1__valore_iniziale: range_cella1__valore_iniziale,
-            range_cella2__valore_iniziale: range_cella2__valore_iniziale,
-            range_cella3__valore_iniziale: range_cella3__valore_iniziale,
-            range_area_valore_iniziale: range_area_valore_iniziale,
-
-            incidenza_sdu: incidenza_sdu,
-            incidenza_count: incidenza_count,
-            incidenza_growing: incidenza_growing,
-
-            coeffcount1_value: coeffcount1_value,
-            coeffcount2_value: coeffcount2_value,
-            coeffcount3_value: coeffcount3_value,
-            coeffsdu1_value: coeffsdu1_value,
-            coeffsdu2_value: coeffsdu2_value,
-            coeffsdu3_value: coeffsdu3_value,
-            coeffgrowing1_value: coeffgrowing1_value,
-            coeffgrowing2_value: coeffgrowing2_value,
-            coeffgrowing3_value: coeffgrowing3_value,
-
-            coeffareacount_value: coeffareacount_value,
-            coeffareasdu_value: coeffareasdu_value,
-            coeffareagrowing_value: coeffareagrowing_value,
-
-            sortProbRadio_value: sortProbRadio_value,
-            sortDistanceRadio_value: sortDistanceRadio_value,
-            sortCoeffRadio_value: sortCoeffRadio_value,
-        };
-        GM_setValue("parametriSalvati", JSON.stringify(parametriSalvati));
-    }
-    function carica_parametri() {
-        // Controlla se i parametri sono già salvati
-        let parametriSalvati = GM_getValue("parametriSalvati", null);
-
-        if (parametriSalvati) {
-            // Se i parametri esistono, li carica e li converte in oggetto
-            parametriSalvati = JSON.parse(parametriSalvati);
-
-            nome_flotta__valore_iniziale = parametriSalvati.nome_flotta__valore_iniziale || "My Fleet";  // Imposta un valore di default se il parametro non esiste
-            maxDistancefromSB_valore_iniziale = parametriSalvati.maxDistancefromSB_valore_iniziale || 30;
-            starbase_valore_iniziale = parametriSalvati.starbase_valore_iniziale || "11,-16";
-
-            range_cella1__valore_iniziale = parametriSalvati.range_cella1__valore_iniziale || 0;
-            range_cella2__valore_iniziale = parametriSalvati.range_cella2__valore_iniziale || 0;
-            range_cella3__valore_iniziale = parametriSalvati.range_cella3__valore_iniziale || 0;
-            range_area_valore_iniziale = parametriSalvati.range_area_valore_iniziale || 0;
-
-            incidenza_sdu = parametriSalvati.incidenza_sdu || 0;
-            incidenza_count = parametriSalvati.incidenza_count || 0;
-            incidenza_growing = parametriSalvati.incidenza_growing || 0;
-
-            coeffcount1_value = parametriSalvati.coeffcount1_value || false;
-            coeffcount2_value = parametriSalvati.coeffcount2_value || false;
-            coeffcount3_value = parametriSalvati.coeffcount3_value || false;
-            coeffsdu1_value = parametriSalvati.coeffsdu1_value || false;
-            coeffsdu2_value = parametriSalvati.coeffsdu2_value || false;
-            coeffsdu3_value = parametriSalvati.coeffsdu3_value || false;
-            coeffgrowing1_value = parametriSalvati.coeffgrowing1_value || false;
-            coeffgrowing2_value = parametriSalvati.coeffgrowing2_value || false;
-            coeffgrowing3_value = parametriSalvati.coeffgrowing3_value || false;
-
-            coeffareacount_value = parametriSalvati.coeffareacount_value || false;
-            coeffareasdu_value = parametriSalvati.coeffareasdu_value || false;
-            coeffareagrowing_value = parametriSalvati.coeffareagrowing_value || false;
-
-            sortProbRadio_value = parametriSalvati.sortProbRadio_value || true;
-            sortDistanceRadio_value = parametriSalvati.sortDistanceRadio_value || false;
-            sortCoeffRadio_value = parametriSalvati.sortCoeffRadio_value || false;
-        }
-    }
-
-    function makeDraggable(el) {
-        el.style.position = 'absolute';
-        el.style.cursor = 'move';
-        let offsetX = 0, offsetY = 0, mouseX = 0, mouseY = 0;
-
-        const onMouseMove = (e) => {
-            e.preventDefault();
-            offsetX = mouseX - e.clientX;
-            offsetY = mouseY - e.clientY;
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            el.style.top = (el.offsetTop - offsetY) + "px";
-            el.style.left = (el.offsetLeft - offsetX) + "px";
-        };
-
-        const onMouseDown = (e) => {
-            if (['input', 'textarea', 'button', 'table', 'label', 'select'].includes(e.target.tagName.toLowerCase())) {
-                return;
-            }
-            e.preventDefault();
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        };
-
-        const onMouseUp = () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        };
-
-        el.addEventListener('mousedown', onMouseDown);
-    }
+    let intervalId = null;
+    let previousScan = new Map();
+    let dati_filtrati_sb = [];
 
     carica_parametri();
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////7
 
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -218,6 +134,12 @@
 
     const currentPosition = document.createElement('div');
     currentPosition.style.fontSize = '16px';
+    currentPosition.style.height = '30px';
+    currentPosition.style.maxHeight = '30px';
+    currentPosition.style.lineHeight = '30px'; // Allinea verticalmente il testo
+    currentPosition.style.overflow = 'hidden'; // Nasconde il testo che esce
+    currentPosition.style.whiteSpace = 'nowrap'; // Evita il ritorno a capo
+    currentPosition.style.textOverflow = 'ellipsis'; // Aggiunge i puntini se necessario
     currentPosition.textContent = 'Posizione attuale: N/A';
     currentPosition.style.marginBottom = '10px';
     currentPosition.style.backgroundColor = 'red';
@@ -244,67 +166,36 @@
 
     const fleetInput = document.createElement('input');
     fleetInput.type = 'text';
-    fleetInput.value = nome_flotta__valore_iniziale;
+    fleetInput.value = nome_flotta_valore_iniziale;
+    fleetInput.onclick = function () {
+        toggleScan();
+        const fleetNames = Array.from(document.querySelectorAll("tr.fleetList td span b"))
+            .map(b => b.textContent.trim()) // Estrae il testo dentro <b>
+            .filter((name, index, self) => self.indexOf(name) === index) // Rimuove duplicati
+
+        // Pulisci la lista e aggiungi i nuovi nomi
+        overlayFlotte.innerHTML = '';
+        fleetNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            overlayFlotte.appendChild(option);
+        });
+
+        overlayFlotte.style.display = 'block'; // Mostra la lista
+    }
     fleetInput.size = '15'
     fleetInput.style.padding = '5px';
     fleetInput.style.boxSizing = 'border-box';
     fleetInput.addEventListener('input', (e) => {
-        nome_flotta__valore_iniziale = e.target.value;
+        nome_flotta_valore_iniziale = e.target.value;
         salva_parametri();
     });
     fleetInputContainer.appendChild(fleetInput);
 
-    const percLabel = document.createElement('label');
-    percLabel.textContent = '%';
-    percLabel.style.margin = '7px'; // Spazio sotto l'etichetta
-    fleetInputContainer.appendChild(percLabel);
-
-    const coordResultLabel = document.createElement('label');
-    coordResultLabel.textContent = 'Coords';
-    coordResultLabel.style.margin = '7px'; // Spazio sotto l'etichetta
-    fleetInputContainer.appendChild(coordResultLabel);
-
-    const divlimitcontainer = document.createElement('div');
-    divlimitcontainer.style.display = 'flex';
-    fleetInputContainer.appendChild(divlimitcontainer);
-
-    const DistanceLimitLabel = document.createElement('label');
-    DistanceLimitLabel.textContent = 'Distance limit ';
-    divlimitcontainer.appendChild(DistanceLimitLabel);
-
-    const DistanceLimitcheckbox = document.createElement('input');
-    DistanceLimitcheckbox.type = 'checkbox';
-    DistanceLimitcheckbox.name = 'distancelimitenable';
-    DistanceLimitcheckbox.checked = true;
-    DistanceLimitcheckbox.addEventListener('change', function () {
-        if (DistanceLimitcheckbox.checked) {
-            DistanceLimitContainer.style.display = 'flex';
-        } else {
-            DistanceLimitContainer.style.display = 'none'; // Inizialmente nascosto
-        }
-
-    });
-    divlimitcontainer.appendChild(DistanceLimitcheckbox);
-
-    const DistanceLimitContainer = document.createElement('div');
-    DistanceLimitContainer.style.display = 'flex';
-    DistanceLimitContainer.style.flexDirection = 'column';
-    DistanceLimitContainer.style.margin = '5px';
-    //DistanceLimitContainer.style.border = '1px solid black'; // Aggiungi questa linea
-    fleetInputContainer.appendChild(DistanceLimitContainer);
-
-    const maxDistancefromSBTxt = document.createElement('input');
-    maxDistancefromSBTxt.type = 'number';
-    maxDistancefromSBTxt.name = 'maxDistancefromSBTxt';
-    maxDistancefromSBTxt.size = '5';
-    maxDistancefromSBTxt.value = maxDistancefromSB_valore_iniziale;
-    maxDistancefromSBTxt.style.margin = '4px';
-    maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    maxDistancefromSBTxt.addEventListener('input', (e) => {
-        maxDistancefromSB_valore_iniziale = e.target.value ? parseFloat(e.target.value, 10) : maxDistancefromSB_valore_iniziale;
-        salva_parametri();
-    });
-    DistanceLimitContainer.appendChild(maxDistancefromSBTxt);
+    const SBcoordsLabel = document.createElement('label');
+    SBcoordsLabel.textContent = 'SB Coords';
+    fleetInputContainer.appendChild(SBcoordsLabel);
 
     const SBcoordsTxt = document.createElement('input');
     SBcoordsTxt.type = 'text';
@@ -317,16 +208,179 @@
         starbase_valore_iniziale = e.target.value;
         salva_parametri();
     });
-    DistanceLimitContainer.appendChild(SBcoordsTxt);
+    fleetInputContainer.appendChild(SBcoordsTxt);
+
+    const DistanceRangeLabel = document.createElement('label');
+    DistanceRangeLabel.textContent = 'Range from SB ';
+    fleetInputContainer.appendChild(DistanceRangeLabel);
+
+    const maxDistancefromSBTxt = document.createElement('input');
+    maxDistancefromSBTxt.type = 'number';
+    maxDistancefromSBTxt.name = 'maxDistancefromSBTxt';
+    maxDistancefromSBTxt.size = '5';
+    maxDistancefromSBTxt.value = maxDistancefromSB_valore_iniziale;
+    maxDistancefromSBTxt.style.margin = '4px';
+    maxDistancefromSBTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    maxDistancefromSBTxt.addEventListener('input', (e) => {
+        maxDistancefromSB_valore_iniziale = e.target.value ? parseFloat(e.target.value) : maxDistancefromSB_valore_iniziale;
+        salva_parametri();
+    });
+    fleetInputContainer.appendChild(maxDistancefromSBTxt);
+
+    const divlimitcontainer = document.createElement('div');
+    divlimitcontainer.style.display = 'flex';
+    fleetInputContainer.appendChild(divlimitcontainer);
+
+    const SmartRangeLabel = document.createElement('label');
+    SmartRangeLabel.textContent = 'Smart range ';
+    divlimitcontainer.appendChild(SmartRangeLabel);
+
+    const SmartRangecheckbox = document.createElement('input');
+    SmartRangecheckbox.type = 'checkbox';
+    SmartRangecheckbox.name = 'smartrangeenable';
+    SmartRangecheckbox.checked = SmartRangecheckbox_value;
+    SmartRangecheckbox.addEventListener('change', function (e) {
+        if (SmartRangecheckbox.checked) {
+            SmartRangeContainer.style.display = 'flex';
+        } else {
+            SmartRangeContainer.style.display = 'none'; // Inizialmente nascosto
+        }
+        SmartRangecheckbox_value = e.target.checked;
+        salva_parametri();
+    });
+    divlimitcontainer.appendChild(SmartRangecheckbox);
+
+    const SmartRangeContainer = document.createElement('div');
+    SmartRangeContainer.style.display = 'none';
+    SmartRangeContainer.style.flexDirection = 'column';
+    SmartRangeContainer.style.margin = '5px';
+    //SmartRangeContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    fleetInputContainer.appendChild(SmartRangeContainer);
+
+    const fuel_range_minContainer = document.createElement('div');
+    fuel_range_minContainer.style.display = 'flex';
+    //fuel_range_minContainer.style.flexDirection = 'column';
+    //fuel_range_minContainer.style.margin = '5px';
+    //fuel_range_minContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    SmartRangeContainer.appendChild(fuel_range_minContainer);
+
+    const fuel_range_minTxt = document.createElement('input');
+    fuel_range_minTxt.type = 'text';
+    fuel_range_minTxt.value = '10';
+    fuel_range_minTxt.name = fuel_range_min_valore_iniziale;
+    fuel_range_minTxt.addEventListener('input', (e) => {
+        fuel_range_min_valore_iniziale = e.target.value ? parseInt(e.target.value) : fuel_range_min_valore_iniziale;
+        salva_parametri();
+    });
+    fuel_range_minTxt.size = '7';
+    //fuel_range_minTxt.style.margin = '4px';
+    fuel_range_minTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    fuel_range_minContainer.appendChild(fuel_range_minTxt);
+
+    const fuel_range_minLabel = document.createElement('label');
+    fuel_range_minLabel.textContent = 'Range min.';
+    fuel_range_minContainer.appendChild(fuel_range_minLabel);
+
+    const fuel_range_maxContainer = document.createElement('div');
+    fuel_range_maxContainer.style.display = 'flex';
+    //fuel_range_maxContainer.style.flexDirection = 'column';
+    //fuel_range_maxContainer.style.margin = '5px';
+    //fuel_range_maxContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    SmartRangeContainer.appendChild(fuel_range_maxContainer);
+
+    const fuel_range_maxTxt = document.createElement('input');
+    fuel_range_maxTxt.type = 'text';
+    fuel_range_maxTxt.value = '40';
+    fuel_range_maxTxt.name = fuel_range_max_valore_iniziale;
+    fuel_range_maxTxt.addEventListener('input', (e) => {
+        fuel_range_max_valore_iniziale = e.target.value ? parseInt(e.target.value) : fuel_range_max_valore_iniziale;
+        salva_parametri();
+    });
+    fuel_range_maxTxt.size = '7';
+    //fuel_range_maxTxt.style.margin = '4px';
+    fuel_range_maxTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    fuel_range_maxContainer.appendChild(fuel_range_maxTxt);
+
+    const fuel_range_maxLabel = document.createElement('label');
+    fuel_range_maxLabel.textContent = 'Fuel max';
+    fuel_range_maxContainer.appendChild(fuel_range_maxLabel);
+
+    const fuelContainer = document.createElement('div');
+    fuelContainer.style.display = 'flex';
+    //fuelContainer.style.flexDirection = 'column';
+    //fuelContainer.style.margin = '5px';
+    //fuelContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    SmartRangeContainer.appendChild(fuelContainer);
 
     const fuelTxt = document.createElement('input');
     fuelTxt.type = 'text';
     fuelTxt.value = 'fuelTxt';
     fuelTxt.name = 'fuelTxt';
     fuelTxt.size = '7';
-    fuelTxt.style.margin = '4px';
+    //fuelTxt.style.margin = '4px';
     fuelTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    DistanceLimitContainer.appendChild(fuelTxt);
+    fuelContainer.appendChild(fuelTxt);
+
+    const FuelLabel = document.createElement('label');
+    FuelLabel.textContent = 'Fuel';
+    fuelContainer.appendChild(FuelLabel);
+
+    const doublecheckContainer = document.createElement('div');
+    doublecheckContainer.style.display = 'flex';
+    doublecheckContainer.style.margin = '1px';
+    //doublecheckContainer.style.border = '1px solid black'; // Aggiungi questa linea
+    fleetInputContainer.appendChild(doublecheckContainer);
+
+    const doubleLabel = document.createElement('label');
+    doubleLabel.textContent = 'Double SB';
+    doublecheckContainer.appendChild(doubleLabel);
+
+    const doublecheckbox = document.createElement('input');
+    doublecheckbox.type = 'checkbox';
+    doublecheckbox.name = 'doublecheckbox';
+    doublecheckbox.id = 'doublecheckbox';
+    doublecheckbox.checked = doublecheckbox_value;
+    doublecheckbox.addEventListener('change', function (e) {
+        if (doublecheckbox.checked) {
+            doublecheckContainer2.style.display = 'flex';
+            //colorSelect.style.display = 'block';
+        } else {
+            doublecheckContainer2.style.display = 'none';
+        }
+        doublecheckbox_value = e.target.checked;
+        salva_parametri();
+    });
+    doublecheckContainer.appendChild(doublecheckbox);
+
+    const doublecheckContainer2 = document.createElement('div');
+    doublecheckContainer2.style.display = 'none';
+    fleetInputContainer.appendChild(doublecheckContainer2);
+
+    const prima_SBTxt = document.createElement('input');
+    prima_SBTxt.type = 'text';
+    prima_SBTxt.name = 'prima_SBTxt';
+    prima_SBTxt.size = '5';
+    prima_SBTxt.style.margin = '2px';
+    prima_SBTxt.value = prima_SB_valore_iniziale;
+    prima_SBTxt.addEventListener('input', (e) => {
+        prima_SB_valore_iniziale = e.target.value;
+        salva_parametri();
+    });
+    prima_SBTxt.style.backgroundColor = colore_prima_SB;
+    doublecheckContainer2.appendChild(prima_SBTxt);
+
+    const seconda_SBTxt = document.createElement('input');
+    seconda_SBTxt.type = 'text';
+    seconda_SBTxt.name = 'seconda_SBTxt';
+    seconda_SBTxt.size = '5';
+    seconda_SBTxt.style.margin = '2px';
+    seconda_SBTxt.value = seconda_SB_valore_iniziale;
+    seconda_SBTxt.addEventListener('input', (e) => {
+        seconda_SB_valore_iniziale = e.target.value;
+        salva_parametri();
+    });
+    seconda_SBTxt.style.backgroundColor = colore_seconda_SB;
+    doublecheckContainer2.appendChild(seconda_SBTxt);
 
     const ocrcheckContainer = document.createElement('div');
     ocrcheckContainer.style.display = 'flex';
@@ -344,21 +398,21 @@
     ocrcheckbox.checked = false;
     ocrcheckbox.addEventListener('change', function () {
         if (ocrcheckbox.checked) {
-            ocrsizeContainer.style.visibility = 'visible';
-            colorSelect.style.display = 'block';
+            ocrsizeContainer.style.display = 'flex';
+            //colorSelect.style.display = 'block';
         } else {
-            ocrsizeContainer.style.visibility = 'hidden';
-            colorSelect.style.display = 'none'; // Inizialmente nascosto
-            ocrUpdatesize(14);
-            selectedColor = 'yellow';
-            ocrUpdatecolor(selectedColor);
+            ocrsizeContainer.style.display = 'none';
+            //colorSelect.style.display = 'none'; // Inizialmente nascosto
+            ocrReset();
         }
+        ocrcheckbox_value = e.target.value;
+        salva_parametri();
     });
     ocrcheckContainer.appendChild(ocrcheckbox);
 
     const ocrsizeContainer = document.createElement('div');
-    ocrsizeContainer.style.visibility = 'hidden';
-    ocrsizeContainer.style.display = 'center';
+    //ocrsizeContainer.style.visibility = 'hidden';
+    ocrsizeContainer.style.display = 'none';
     ocrsizeContainer.style.margin = '1px';
     //ocrsizeContainer.style.border = '1px solid black'; // Aggiungi questa linea
     fleetInputContainer.appendChild(ocrsizeContainer);
@@ -388,7 +442,7 @@
 
     // Creazione del menu a tendina (select)
     const colorSelect = document.createElement('select');
-    colorSelect.style.display = 'none';
+    colorSelect.style.display = 'block';
     const colors = ['yellow', 'red', 'green', 'blue', 'pink', 'orange'];
     colors.forEach(color => {
         const option = document.createElement('option');
@@ -400,7 +454,12 @@
         selectedColor = colorSelect.value; // Colore selezionato
         ocrUpdatecolor(selectedColor);
     });
-    fleetInputContainer.appendChild(colorSelect);
+    ocrsizeContainer.appendChild(colorSelect);
+
+    const paramJsonText = document.createElement('input');
+    paramJsonText.style.width = '40px';
+    paramJsonText.style.margin = '5px';
+    fleetInputContainer.appendChild(paramJsonText);
 
     const distanceInputContainer = document.createElement('div');
     distanceInputContainer.style.display = 'flex';
@@ -465,12 +524,12 @@
     maxdistanceFromFleetTxt1.min = '0';
     maxdistanceFromFleetTxt1.max = '99'; // Limita il numero massimo a 99
     maxdistanceFromFleetTxt1.step = '0.1'; // Incrementa o diminuisce di 0.1
-    maxdistanceFromFleetTxt1.value = range_cella1__valore_iniziale;
+    maxdistanceFromFleetTxt1.value = range_cella1_valore_iniziale;
     maxdistanceFromFleetTxt1.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt1.style.padding = '5px';
     maxdistanceFromFleetTxt1.style.margin = '4px';
     maxdistanceFromFleetTxt1.addEventListener('input', (e) => {
-        range_cella1__valore_iniziale = parseFloat(e.target.value);
+        range_cella1_valore_iniziale = parseFloat(e.target.value);
         salva_parametri();
     });
     distpercContainer1.appendChild(maxdistanceFromFleetTxt1);
@@ -567,12 +626,12 @@
     maxdistanceFromFleetTxt2.min = '1';
     maxdistanceFromFleetTxt2.max = '99'; // Limita il numero massimo a 99
     maxdistanceFromFleetTxt2.step = '0.1'; // Incrementa o diminuisce di 0.1
-    maxdistanceFromFleetTxt2.value = range_cella2__valore_iniziale;
+    maxdistanceFromFleetTxt2.value = range_cella2_valore_iniziale;
     maxdistanceFromFleetTxt2.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt2.style.padding = '5px';
     maxdistanceFromFleetTxt2.style.margin = '4px';
     maxdistanceFromFleetTxt2.addEventListener('input', (e) => {
-        range_cella2__valore_iniziale = parseFloat(e.target.value);
+        range_cella2_valore_iniziale = parseFloat(e.target.value);
         salva_parametri();
     });
     distpercContainer2.appendChild(maxdistanceFromFleetTxt2);
@@ -669,12 +728,12 @@
     maxdistanceFromFleetTxt3.min = '1';
     maxdistanceFromFleetTxt3.max = '99'; // Limita il numero massimo a 99
     maxdistanceFromFleetTxt3.step = '0.1'; // Incrementa o diminuisce di 0.1
-    maxdistanceFromFleetTxt3.value = range_cella3__valore_iniziale;
+    maxdistanceFromFleetTxt3.value = range_cella3_valore_iniziale;
     maxdistanceFromFleetTxt3.style.width = '50px'; // Imposta una larghezza specifica in pixel
     maxdistanceFromFleetTxt3.style.padding = '5px';
     maxdistanceFromFleetTxt3.style.margin = '4px';
     maxdistanceFromFleetTxt3.addEventListener('input', (e) => {
-        range_cella3__valore_iniziale = parseFloat(e.target.value);
+        range_cella3_valore_iniziale = parseFloat(e.target.value);
         salva_parametri();
     });
     distpercContainer3.appendChild(maxdistanceFromFleetTxt3);
@@ -740,7 +799,7 @@
     percCoordContainer.appendChild(coeffcheckareaContainer);
 
     const coeffcheckareaLabel = document.createElement('label');
-    coeffcheckareaLabel.textContent = 'Coeff for c3';
+    coeffcheckareaLabel.textContent = 'Coeff for Area';
     coeffcheckareaLabel.style.marginBottom = '5px'; // Spazio sotto l'etichetta
     coeffcheckareaContainer.appendChild(coeffcheckareaLabel);
 
@@ -759,7 +818,7 @@
     coeffareasdu.name = 'coeffareasdu';
     coeffareasdu.checked = coeffareasdu_value;
     coeffareasdu.addEventListener('change', function (e) {
-        coeffareasdu_value = coeffareasdu.checked;
+        coeffareasdu_value = e.target.checked;
         salva_parametri();
     });
     coeffcheckareaContainer.appendChild(coeffareasdu);
@@ -907,12 +966,13 @@
     sortProbRadio.type = 'radio';
     sortProbRadio.name = 'sortRadio';
     sortProbRadio.checked = sortProbRadio_value;
-    sortProbRadio.addEventListener('change', function () {
+    sortProbRadio.addEventListener('change', function (e) {
         if (sortProbRadio.checked) {
             sortProbRadio_value = true;
             sortDistanceRadio_value = false;
             sortCoeffRadio_value = false;
         }
+        sortProbRadio_value = e.target.checked;
         salva_parametri();
     });
     probContainer.appendChild(sortProbRadio);
@@ -931,12 +991,13 @@
     sortDistanceRadio.type = 'radio';
     sortDistanceRadio.name = 'sortRadio';
     sortDistanceRadio.checked = sortDistanceRadio_value;
-    sortDistanceRadio.addEventListener('change', function () {
+    sortDistanceRadio.addEventListener('change', function (e) {
         if (sortDistanceRadio.checked) {
             sortDistanceRadio_value = true;
             sortProbRadio_value = false;
             sortCoeffRadio_value = false;
         }
+        sortDistanceRadio_value = e.target.checked;
         salva_parametri();
     });
     DistanceContainer.appendChild(sortDistanceRadio);
@@ -955,27 +1016,63 @@
     sortCoeffRadio.type = 'radio';
     sortCoeffRadio.name = 'sortRadio';
     sortCoeffRadio.checked = sortCoeffRadio_value;
-    sortCoeffRadio.addEventListener('change', function () {
+    sortCoeffRadio.addEventListener('change', function (e) {
         if (sortCoeffRadio.checked) {
             sortCoeffRadio_value = true;
             sortProbRadio_value = false;
             sortDistanceRadio_value = false;
         }
+        sortCoeffRadio_value = e.target.checked;
         salva_parametri();
     });
     CoeffsortCointainer.appendChild(sortCoeffRadio);
 
+    const buttondiv = document.createElement('div');
+    container.appendChild(buttondiv);
 
     const button = document.createElement('button');
     button.textContent = 'Avvia Scansione Automatica';
     button.style.flex = '1';
     button.style.padding = '10px';
+    button.style.marginBlock = '2px';
     button.style.backgroundColor = '#007BFF';
     button.style.color = '#fff';
     button.style.border = 'none';
     button.style.borderRadius = '5px';
     button.style.cursor = 'pointer';
-    container.appendChild(button);
+    buttondiv.appendChild(button);
+
+    // Creazione di un elemento <select> per la lista di nomi
+    const overlayFlotte = document.createElement('select');
+    overlayFlotte.id = "overlayFlotte";
+    overlayFlotte.style.position = 'absolute';
+    overlayFlotte.style.top = '50px'; // Poco sopra il pulsante
+    overlayFlotte.style.left = '10px';
+    overlayFlotte.style.backgroundColor = '#ffffff'; // Sfondo bianco
+    overlayFlotte.style.color = '#333'; // Testo scuro
+    overlayFlotte.style.padding = '5px'; // Margine interno ridotto
+    overlayFlotte.style.border = '1px solid #ccc'; // Bordo grigio chiaro
+    overlayFlotte.style.borderRadius = '8px'; // Angoli arrotondati
+    //overlayFlotte.style.boxShadow = '0px 4px 8px rgba(0, 0, 0, 0.2)'; // Ombreggiatura
+    overlayFlotte.style.display = 'none'; // Nascondi inizialmente
+    //overlayFlotte.style.width = '250px'; // Larghezza più compatta
+    //overlayFlotte.style.height = 'auto'; // Altezza dinamica
+    //overlayFlotte.style.maxHeight = '200px'; // Altezza massima con scroll
+    overlayFlotte.style.overflowY = 'auto'; // Scroll verticale se necessario
+    overlayFlotte.style.fontFamily = 'Arial, sans-serif'; // Font moderno
+    overlayFlotte.style.fontSize = '14px'; // Dimensione del testo
+    overlayFlotte.size = 10; // Mostra fino a 10 elementi contemporaneamente
+    buttondiv.appendChild(overlayFlotte);
+
+    // Aggiungi un evento per aggiornare fleetInput.value quando viene selezionato un nome
+    overlayFlotte.addEventListener('change', () => {
+        fleetInput.value = overlayFlotte.value; // Imposta il valore selezionato
+        fleetInput.dispatchEvent(new Event('input')); // Simula l'evento 'input'
+        salva_parametri(); // Salva i parametri aggiornati
+        overlayFlotte.style.display = 'none'; // Nascondi la lista dopo la selezione
+    });
+
+
 
     const tablecontainer = document.createElement('div');
     tablecontainer.style.maxHeight = '250px'; // Imposta l'altezza massima
@@ -1004,6 +1101,42 @@
     byebye.style.userSelect = 'text';
     byebyecontainer.appendChild(byebye);
     button.addEventListener('click', toggleScan);
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    updateParametri();
+
+    function makeDraggable(el) {
+        el.style.position = 'absolute';
+        el.style.cursor = 'move';
+        let offsetX = 0, offsetY = 0, mouseX = 0, mouseY = 0;
+
+        const onMouseMove = (e) => {
+            e.preventDefault();
+            offsetX = mouseX - e.clientX;
+            offsetY = mouseY - e.clientY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            el.style.top = (el.offsetTop - offsetY) + "px";
+            el.style.left = (el.offsetLeft - offsetX) + "px";
+        };
+
+        const onMouseDown = (e) => {
+            if (['input', 'textarea', 'button', 'table', 'label', 'select'].includes(e.target.tagName.toLowerCase()) || e.target.closest('#overlayFlotte') ) {
+                return;
+            }
+            e.preventDefault();
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        el.addEventListener('mousedown', onMouseDown);
+    }
 
     // Funzione per simulare il clic sul pulsante
     function simulateButtonClick() {
@@ -1023,20 +1156,19 @@
             button.textContent = 'Avvia Scansione Automatica';
             button.style.backgroundColor = 'green';
         } else {
+            clicca_seleziona_flotta(fleetInput.value);
             intervalId = setInterval(main_loop, 2000);
             button.textContent = 'Arresta Scansione Automatica';
             button.style.backgroundColor = 'red';
+
         }
     }
     // Esegui la scansione automatica ogni 2 secondi (2000 millisecondi)
-    let intervalId = null;
     button.addEventListener('click', toggleScan);
-
-    let previousScan = new Map();
-    let dati_filtrati_sb = [];
 
     function main_loop() {
         updateFleetPosition();
+        updateParametri();
         const celle_pagina = scanData();
 
         //dati_filtrati_sb = filtra_distanza_sb(celle_pagina);
@@ -1099,7 +1231,7 @@
         previousScan.forEach((prevCell, key) => {
             if (!mergedData.has(key)) {
                 let clonedCell = { ...prevCell }; // Cloniamo per sicurezza
-                clonedCell.distance = calculateDistance(currentX, currentY, clonedCell.x, clonedCell.y);
+                clonedCell.distance = parseFloat(calculateDistance(currentX, currentY, clonedCell.x, clonedCell.y));
                 clonedCell.sdu = 0;
                 clonedCell.count = 0;
                 mergedData.set(key, clonedCell);
@@ -1151,7 +1283,7 @@
                 const time = rectElement?.getAttribute('time') || 'N/A';
                 const timeOnly = time.split(' ')[1] || 'N/A';
 
-                const distance = calculateDistance(currentX, currentY, x, y);
+                const distance = parseFloat(calculateDistance(currentX, currentY, x, y));
 
                 const key = `${x},${y}`;
                 const prevCell = previousScan.get(key);
@@ -1173,13 +1305,32 @@
     }
 
     function filtra_distanza_sb(data) {
-        if (DistanceLimitcheckbox.checked) {
+        let filtered_Data = [];
+        if (SmartRangecheckbox.checked) {
             maxdistanceFromSB = parseFloat(maxDistancefromSBTxt.value);
         } else {
             maxdistanceFromSB = maxDistancefromSB_valore_iniziale;
         }
-        const filtered_Data = data.filter(item => calculateDistance(starbaseX, starbaseY, item.x, item.y) <= maxdistanceFromSB);
 
+        if (doublecheckbox.checked && maxdistanceFromSB >= 20) {
+
+            const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, currentX, currentY));
+            const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, currentX, currentY));
+            //debugTxt.value = `1: ${distanza_primaSB}, 2: ${distanza_secondaSB}`;
+            const primaSBfiltered_Data = data.filter(item => distanza_primaSB <= maxdistanceFromSB);
+            const secondaSBfiltered_Data = data.filter(item => distanza_secondaSB <= maxdistanceFromSB);
+            filtered_Data = [...new Set([...primaSBfiltered_Data, ...secondaSBfiltered_Data])];
+            if (distanza_primaSB < distanza_secondaSB) {
+                SBcoordsTxt.value = `${primaSBx},${primaSBy}`;
+                SBcoordsTxt.style.backgroundColor = colore_prima_SB;
+            } else {
+                SBcoordsTxt.value = `${secondaSBx},${secondaSBy}`;
+                SBcoordsTxt.style.backgroundColor = colore_seconda_SB;
+            }
+
+        } else {
+            filtered_Data = data.filter(item => parseFloat(calculateDistance(starbaseX, starbaseY, item.x, item.y)) <= maxdistanceFromSB);
+        }
         return filtered_Data;
     }
     function filtra_vecchi(data) {
@@ -1217,7 +1368,7 @@
         let bestCell = null;
         // Filtra i dati per includere solo i settori entro maxareaFromFleetTxt
         const dati_filtrati_dist_fleet = data.filter(item => {
-            const distanceFromFleet = calculateDistance(currentX, currentY, item.x, item.y);
+            const distanceFromFleet = parseFloat(calculateDistance(currentX, currentY, item.x, item.y));
             return distanceFromFleet <= parseFloat(maxareaFromFleetTxt.value);
         });
 
@@ -1243,7 +1394,7 @@
             let minDistance = Infinity;
             let closestCell = null;
             // calcola distanza tra il centro dell'area e currentX, currentY
-            let distanceToArea = calculateDistance(currentX, currentY, bestArea.x, bestArea.y);
+            let distanceToArea = parseFloat(calculateDistance(currentX, currentY, bestArea.x, bestArea.y));
             if (distanceToArea > 6) {
 
                 // Per ogni cella nella zona di interesse, calcoliamo la distanza da currentX, currentY
@@ -1256,7 +1407,7 @@
                             const coeff = calculateCoeff(sectorData.prob, sectorData.count, sectorData.sdu, sectorData.growing, 1, 1, 1);
 
                             // Calcola la distanza tra la cella corrente e currentX, currentY
-                            const distanceToCurrent = calculateDistance(currentX, currentY, x, y);
+                            const distanceToCurrent = parseFloat(calculateDistance(currentX, currentY, x, y));
 
                             // Se la distanza è la più piccola finora, aggiorna la cella più vicina
                             if (distanceToCurrent < minDistance) {
@@ -1275,6 +1426,8 @@
         }
         return bestCell;
     }
+
+
 
     function update_celle(data) {
         const bestArea = findBestArea(data);
@@ -1328,7 +1481,7 @@
 
         // 🔍 Applichiamo il filtro simile a `findBestArea`
         const filteredData = data.filter(item => {
-            const distanzacella = calculateDistance(currentX, currentY, item.x, item.y);
+            const distanzacella = parseFloat(calculateDistance(currentX, currentY, item.x, item.y));
             return distanzacella <= maxdistance;
         });
 
@@ -1347,7 +1500,7 @@
 
         // Troviamo la cella con il valore massimo e distanza minima
         filteredData.forEach(item => {
-            let distance = calculateDistance(currentX, currentY, item.x, item.y);
+            let distance = parseFloat(calculateDistance(currentX, currentY, item.x, item.y));
             let coeff = parseFloat(item.coeff);
 
             if (!isNaN(coeff) && coeff === maxCoeffInRange && distance < minDistanceCoeff) {
@@ -1476,6 +1629,7 @@
     }
 
     function updateFleetPosition() { // e starbase input
+
         const starbaseInput = SBcoordsTxt.value.trim();
 
         const starbaseInputcoords = starbaseInput.split(',').map(num => parseFloat(num.trim()));
@@ -1488,7 +1642,27 @@
             [starbaseX, starbaseY] = starbaseInputcoords;
         }
 
-        const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${nome_flotta__valore_iniziale}"]`);
+        const primaSBInput = prima_SBTxt.value.trim();
+        const primaSBInputcoords = primaSBInput.split(',').map(num => parseFloat(num.trim()));
+        if (primaSBInputcoords.length !== 2 || !areValidCoordinates(primaSBInputcoords)) {
+            alert("Inserisci le coordinate nel formato corretto: x,y (es. 15,-9)");
+            [primaSBx, primaSBy] = [11, -16];
+            return;
+        } else {
+            [primaSBx, primaSBy] = primaSBInputcoords;
+        }
+
+        const secondaSBInput = seconda_SBTxt.value.trim();
+        const secondaSBInputcoords = secondaSBInput.split(',').map(num => parseFloat(num.trim()));
+        if (secondaSBInputcoords.length !== 2 || !areValidCoordinates(secondaSBInputcoords)) {
+            alert("Inserisci le coordinate nel formato corretto: x,y (es. 15,-9)");
+            [secondaSBx, secondaSBy] = [-14, -16];
+            return;
+        } else {
+            [secondaSBx, secondaSBy] = secondaSBInputcoords;
+        }
+
+        const fleetRow = document.querySelector(`#fleetStats .ui_fleet span[oncontextmenu*="${nome_flotta_valore_iniziale}"]`);
         if (fleetRow) {
             const stateRow = fleetRow.closest('tr').nextElementSibling;
             const tdElement = stateRow.querySelector('#fleet_selected_state');
@@ -1510,6 +1684,7 @@
                             .replace(/\s+/g, ' ') // Rimuove spazi multipli
                             .trim();
                         currentPosition.textContent = `${scenarioDescription.replace('|', ',')}`;
+                        //currentPosition.textContent = `${scenarioDescription}`;
                         currentPosition.style.backgroundColor = 'green';
                     } else {
                         alert("Le coordinate della flotta non sono valide.");
@@ -1551,15 +1726,21 @@
 
                 // Inserisci la percentuale in un elemento con id "fuelPercentageDisplay"
                 fuelTxt.value = fuel + "%";
-                if (DistanceLimitcheckbox.checked) {
-                    let distanza_calc_fuel = fuel > 40
-                        ? maxDistancefromSB_valore_iniziale
-                        : Math.max(10, Math.floor((fuel / 40) * maxDistancefromSB_valore_iniziale));
-                    let distanza_flotta = parseFloat(calculateDistance(currentX, currentY, starbaseX, starbaseY));
-                    if (distanza_calc_fuel < distanza_flotta-2) {
-                        maxDistancefromSBTxt.value = distanza_flotta;
+                if (SmartRangecheckbox.checked) {
+                    let distanza_calc_fuel = 0;
+                    let fuel_range_max = parseInt(fuel_range_maxTxt.value);
+                    let fuel_range_min = parseInt(fuel_range_minTxt.value);
+
+                    if (fuel >= fuel_range_max) {
+                        distanza_calc_fuel = maxDistancefromSB_valore_iniziale;
                     } else {
-                        maxDistancefromSBTxt.value = distanza_calc_fuel.toFixed(0);
+                        distanza_calc_fuel = Math.max(fuel_range_min, Math.floor((fuel / fuel_range_max) * maxDistancefromSB_valore_iniziale));
+                    }
+                    let distanza_flotta = parseFloat(calculateDistance(currentX, currentY, starbaseX, starbaseY));
+                    if (distanza_calc_fuel <= distanza_flotta - 2) {
+                        maxDistancefromSBTxt.value = (distanza_flotta - 2).toFixed(1);
+                    } else {
+                        maxDistancefromSBTxt.value = distanza_calc_fuel.toFixed(1);
                     }
                 }
                 else {
@@ -1575,29 +1756,339 @@
             let percentageMatch = cargoText.match(/\((\d+)%\)/);
             // Estrarre il numero prima di "Food" (es. 31124)
             let foodMatch = cargoText.match(/([\d,.]+)\s*<span style="color:#08f414">Food<\/span>/);
-            foodValue = foodMatch ? foodMatch[1] : "N/A";
         }
     }
     function ocrUpdatesize(size) {
         let sizestr = String(size) + 'px';
+
+        maxdistanceFromFleetTxt1.style.fontSize = sizestr;
         probCellaTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
         percCoordxTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
         percCoordyTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        maxdistanceFromFleetTxt1.style.fontSize = sizestr;
+        probCellaTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordxTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordyTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        maxdistanceFromFleetTxt1.style.fontSize = sizestr;
+        probCellaTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordxTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        percCoordyTxt1.style.fontSize = sizestr; // Modifica la dimensione del font
+        maxareaFromFleetTxt.style.fontSize = sizestr;
         probAreaTxt.style.fontSize = sizestr; // Modifica la dimensione del font
         cordArea_x_Txt.style.fontSize = sizestr; // Modifica la dimensione del font
         cordArea_y_Txt.style.fontSize = sizestr; // Modifica la dimensione del font
         let sizeelement = String(50 + 3 * (size - 13)) + 'px';
-        probCellaTxt1.style.width = sizeelement;
-        percCoordxTxt1.style.width = sizeelement;
-        percCoordyTxt1.style.width = sizeelement;
-        probAreaTxt.style.width = sizeelement;
-        cordArea_x_Txt.style.width = sizeelement;
-        cordArea_y_Txt.style.width = sizeelement;
+
+        maxdistanceFromFleetTxt1.style.width = sizeelement;
+        probCellaTxt1.style.width = sizeelement; // Modifica la dimensione del font
+        percCoordxTxt1.style.width = sizeelement; // Modifica la dimensione del font
+        percCoordyTxt1.style.width = sizeelement; // Modifica la dimensione del font
+        maxdistanceFromFleetTxt2.style.width = sizeelement;
+        probCellaTxt2.style.width = sizeelement; // Modifica la dimensione del font
+        percCoordxTxt2.style.width = sizeelement; // Modifica la dimensione del font
+        percCoordyTxt2.style.width = sizeelement; // Modifica la dimensione del font
+        maxdistanceFromFleetTxt3.style.width = sizeelement;
+        probCellaTxt3.style.width = sizeelement; // Modifica la dimensione del font
+        percCoordxTxt3.style.width = sizeelement; // Modifica la dimensione del font
+        percCoordyTxt3.style.width = sizeelement; // Modifica la dimensione del font
+        maxareaFromFleetTxt.style.width = sizeelement;
+        probAreaTxt.style.width = sizeelement; // Modifica la dimensione del font
+        cordArea_x_Txt.style.width = sizeelement; // Modifica la dimensione del font
+        cordArea_y_Txt.style.width = sizeelement; // Modifica la dimensione del font
     }
     function ocrUpdatecolor(color) {
-        probCellaTxt.style.backgroundColor = color; // Colore di sfondo giallo
+        probCellaTxt1.style.backgroundColor = color; // Colore di sfondo giallo
+        probCellaTxt2.style.backgroundColor = color; // Colore di sfondo giallo
+        probCellaTxt3.style.backgroundColor = color; // Colore di sfondo giallo
         probAreaTxt.style.backgroundColor = color; // Colore di sfondo giallo
     }
+    function ocrReset() {
+        ocrUpdatesize(14);
+        selectedColor = 'yellow';
+        ocrUpdatecolor(selectedColor);
+    }
 
+    function trova_fleet_id() {
+        // Trova il <td> con attributo fleet uguale a fleetname
+        const td = document.querySelector(`td[fleet="${fleetInput.value}"]`);
+
+        if (!td) {
+            console.warn(`Nessun td trovato con fleet="${fleetInput.value}"`);
+            return;
+        }
+
+        // Estrai la funzione fleet_populateDetails dall'attributo onclick
+        const onclickAttr = td.getAttribute("onclick");
+        const match = onclickAttr.match(/fleet_populateDetails\('([^']+)'\)/);
+
+        if (match && match[1]) {
+            const fleetId = match[1];
+            //console.log("Valore estratto da fleet_populateDetails:", fleetId);
+
+            // Costruisci l'id da cercare
+            const targetId = `fleet_${fleetId}_tab`;
+            const targetElement = document.getElementById(targetId);
+
+            if (targetElement) {
+                //console.log("Elemento trovato con id:", targetId, targetElement);
+                // Puoi fare qualcosa qui, ad esempio evidenziarlo
+                targetElement.style.border = "2px solid red";
+            } else {
+                console.warn("Nessun elemento trovato con id:", targetId);
+            }
+            return fleetId
+        } else {
+            console.warn("Nessun match trovato per fleet_populateDetails() in onclick");
+            return "error"
+        }
+
+    }
+
+    function updateParametri() {
+        // Trova il contenitore principale
+        let fleetStats = document.querySelector("#fleet_stats");
+        let value = '';
+
+        if (fleetStats) {
+            // Cerca tutti i <tr> dentro #fleet_stats
+            let rows = fleetStats.querySelectorAll("tr");
+
+            rows.forEach(row => {
+                let firstTd = row.querySelector("td:first-child"); // Primo <td> della riga
+
+                if (firstTd) {
+                    let label = firstTd.textContent.trim(); // Testo del primo <td>
+                    let valueTd = firstTd.nextElementSibling; // Secondo <td> (il valore)
+
+                    if (valueTd) {
+                        value = valueTd.textContent.trim();
+
+                        if (label.includes("Subwarp Speed")) {
+                            subwarpSpeed = value;
+                        } else if (label.includes("Scan Cooldown")) {
+                            scanCooldown = value;
+                        } else if (label.includes("SDU per Scan")) {
+                            sduxScan = value;
+                        }
+                    }
+                }
+            });
+        }
+
+        else {
+            console.log("errore updateParametri fleetstat");
+        }
+        fleetID = trova_fleet_id();
+        // Creazione JSON
+        let parametriJson = JSON.stringify({
+            nomeFlotta: fleetInput.value,
+            idFlotta: fleetID,
+            sbCoords: SBcoordsTxt.value,
+            rangeSB: maxDistancefromSBTxt.value,
+            smartRange: SmartRangecheckbox.checked,
+            fuel: fuelTxt.value,
+
+
+            coeffcount1: coeffcount1.checked,
+            coeffsdu1: coeffsdu1.checked,
+            coeffgrowing1: coeffgrowing1.checked,
+            maxdistanceFromFleet1: maxdistanceFromFleetTxt1.value,
+            probCella1: probCellaTxt1.value,
+            percCoordx1: percCoordxTxt1.value,
+            percCoordy1: percCoordyTxt1.value,
+
+            coeffcount2: coeffcount2.checked,
+            coeffsdu2: coeffsdu2.checked,
+            coeffgrowing2: coeffgrowing2.checked,
+            maxdistanceFromFleet2: maxdistanceFromFleetTxt2.value,
+            probCella2: probCellaTxt2.value,
+            percCoordx2: percCoordxTxt2.value,
+            percCoordy2: percCoordyTxt2.value,
+
+            coeffcount3: coeffcount3.checked,
+            coeffsdu3: coeffsdu3.checked,
+            coeffgrowing3: coeffgrowing3.checked,
+            maxdistanceFromFleet3: maxdistanceFromFleetTxt3.value,
+            probCella3: probCellaTxt3.value,
+            percCoordx3: percCoordxTxt3.value,
+            percCoordy3: percCoordyTxt3.value,
+
+            coeffareacount: coeffareacount.checked,
+            coeffareasdu: coeffareasdu.checked,
+            coeffareagrowing: coeffareagrowing.checked,
+            maxareaFromFleet: maxareaFromFleetTxt.value,
+            probArea: probAreaTxt.value,
+            cordArea_x: cordArea_x_Txt.value,
+            cordArea_y: cordArea_y_Txt.value,
+
+
+            IncidenzaCount: IncidenzaCountTxt.value,
+            IncidenzaSdu: IncidenzaSduTxt.value,
+            IncidenzaGrowing: IncidenzaGrowingTxt.value,
+
+            subwarpSpeed: subwarpSpeed,
+            scanCooldown: scanCooldown,
+            sduxScan: sduxScan
+        });
+
+        // Assegna il JSON a paramJsonText.value
+        paramJsonText.value = parametriJson;
+
+        if (SmartRangecheckbox_value) {
+            SmartRangecheckbox.checked = true;
+            SmartRangeContainer.style.display = 'flex';
+        } else {
+            SmartRangecheckbox.checked = false;
+            SmartRangeContainer.style.display = 'none'; // Inizialmente nascosto
+        }
+        if (doublecheckbox_value) {
+            doublecheckbox.checked = true;
+            doublecheckContainer2.style.display = 'flex';
+            //colorSelect.style.display = 'block';
+        } else {
+            doublecheckbox.checked = false;
+            doublecheckContainer2.style.display = 'none';
+        }
+        if (ocrcheckbox_value) {
+            ocrcheckbox.checked = true;
+            ocrsizeContainer.style.display = 'flex';
+            //colorSelect.style.display = 'block';
+        } else {
+            ocrcheckbox.checked = false;
+            ocrsizeContainer.style.display = 'none';
+            //colorSelect.style.display = 'none'; // Inizialmente nascosto
+            ocrReset();
+        }
+
+    }
+
+    function clicca_seleziona_flotta(fleetName) {
+        // Trova l'elemento <tr> con la classe "mnu_row syncicon"
+        const fleetMenuRow = Array.from(document.querySelectorAll("td.mnu_title"))
+        .find(td => td.textContent.trim() === "FLEETS");
+
+        if (fleetMenuRow) {
+            // Simula un clic sull'elemento
+            fleetMenuRow.click();
+            console.log("Elemento cliccato con successo!");
+        } else {
+            console.error("Elemento non trovato!");
+        }
+
+        // Trova il <td> con il nome della flotta specificato
+        const fleetElement = document.querySelector(`td span[oncontextmenu*="${fleetName}"]`);
+
+        if (fleetElement) {
+            // Simula il clic sull'elemento
+            fleetElement.click();
+            console.log(`Elemento con nome flotta "${fleetName}" cliccato con successo!`);
+        } else {
+            console.error(`Elemento con nome flotta "${fleetName}" non trovato.`);
+        }
+        if (fleetMenuRow) {
+            // Simula un clic sull'elemento
+            fleetMenuRow.click();}
+    }
+
+    function salva_parametri() {
+        // Esegui altre azioni basate su questi parametri
+        // Se non ci sono parametri salvati, creiamo e salviamo un oggetto predefinito
+        let parametriSalvati = {
+            nome_flotta_valore_iniziale: nome_flotta_valore_iniziale,
+            maxDistancefromSB_valore_iniziale: maxDistancefromSB_valore_iniziale,
+            starbase_valore_iniziale: starbase_valore_iniziale,
+
+            SmartRangecheckbox_value: SmartRangecheckbox_value,
+            fuel_range_min_valore_iniziale: fuel_range_min_valore_iniziale,
+            fuel_range_max_valore_iniziale: fuel_range_max_valore_iniziale,
+
+            doublecheckbox_value: doublecheckbox_value,
+            prima_SB_valore_iniziale: prima_SB_valore_iniziale,
+            seconda_SB_valore_iniziale: seconda_SB_valore_iniziale,
+
+            ocrcheckbox_value: ocrcheckbox_value,
+
+            range_cella1_valore_iniziale: range_cella1_valore_iniziale,
+            range_cella2_valore_iniziale: range_cella2_valore_iniziale,
+            range_cella3_valore_iniziale: range_cella3_valore_iniziale,
+            range_area_valore_iniziale: range_area_valore_iniziale,
+
+            incidenza_sdu: incidenza_sdu,
+            incidenza_count: incidenza_count,
+            incidenza_growing: incidenza_growing,
+
+            coeffcount1_value: coeffcount1_value,
+            coeffcount2_value: coeffcount2_value,
+            coeffcount3_value: coeffcount3_value,
+            coeffsdu1_value: coeffsdu1_value,
+            coeffsdu2_value: coeffsdu2_value,
+            coeffsdu3_value: coeffsdu3_value,
+            coeffgrowing1_value: coeffgrowing1_value,
+            coeffgrowing2_value: coeffgrowing2_value,
+            coeffgrowing3_value: coeffgrowing3_value,
+
+            coeffareacount_value: coeffareacount_value,
+            coeffareasdu_value: coeffareasdu_value,
+            coeffareagrowing_value: coeffareagrowing_value,
+
+            sortProbRadio_value: sortProbRadio_value,
+            sortDistanceRadio_value: sortDistanceRadio_value,
+            sortCoeffRadio_value: sortCoeffRadio_value,
+        };
+        GM_setValue("parametriSalvati", JSON.stringify(parametriSalvati));
+    }
+    function carica_parametri() {
+        // Controlla se i parametri sono già salvati
+        let parametriSalvati = GM_getValue("parametriSalvati", null);
+
+        if (parametriSalvati) {
+            // Se i parametri esistono, li carica e li converte in oggetto
+            parametriSalvati = JSON.parse(parametriSalvati);
+
+            nome_flotta_valore_iniziale = parametriSalvati.nome_flotta_valore_iniziale || "My Fleet";  // Imposta un valore di default se il parametro non esiste
+            maxDistancefromSB_valore_iniziale = parametriSalvati.maxDistancefromSB_valore_iniziale || 100; //limite default
+            starbase_valore_iniziale = parametriSalvati.starbase_valore_iniziale || "11,-16";
+
+            SmartRangecheckbox_value = parametriSalvati.SmartRangecheckbox_value | false;
+            fuel_range_min_valore_iniziale = parametriSalvati.fuel_range_min_valore_iniziale || 10;
+            fuel_range_max_valore_iniziale = parametriSalvati.fuel_range_max_valore_iniziale || 40;
+
+            doublecheckbox_value = parametriSalvati.doublecheckbox_value | false;
+            prima_SB_valore_iniziale = parametriSalvati.prima_SBTxt || "11,-16";
+            seconda_SB_valore_iniziale = parametriSalvati.seconda_SBTxt || "-14,-16";
+
+            ocrcheckbox_value = parametriSalvati.ocrcheckbox_value || false;
+
+            range_cella1_valore_iniziale = parametriSalvati.range_cella1_valore_iniziale || 0;
+            range_cella2_valore_iniziale = parametriSalvati.range_cella2_valore_iniziale || 0;
+            range_cella3_valore_iniziale = parametriSalvati.range_cella3_valore_iniziale || 0;
+            range_area_valore_iniziale = parametriSalvati.range_area_valore_iniziale || 0;
+
+            incidenza_sdu = parametriSalvati.incidenza_sdu || 0;
+            incidenza_count = parametriSalvati.incidenza_count || 0;
+            incidenza_growing = parametriSalvati.incidenza_growing || 0;
+
+            coeffcount1_value = parametriSalvati.coeffcount1_value || false;
+            coeffcount2_value = parametriSalvati.coeffcount2_value || false;
+            coeffcount3_value = parametriSalvati.coeffcount3_value || false;
+            coeffsdu1_value = parametriSalvati.coeffsdu1_value || false;
+            coeffsdu2_value = parametriSalvati.coeffsdu2_value || false;
+            coeffsdu3_value = parametriSalvati.coeffsdu3_value || false;
+            coeffgrowing1_value = parametriSalvati.coeffgrowing1_value || false;
+            coeffgrowing2_value = parametriSalvati.coeffgrowing2_value || false;
+            coeffgrowing3_value = parametriSalvati.coeffgrowing3_value || false;
+
+            coeffareacount_value = parametriSalvati.coeffareacount_value || false;
+            coeffareasdu_value = parametriSalvati.coeffareasdu_value || false;
+            coeffareagrowing_value = parametriSalvati.coeffareagrowing_value || false;
+
+            sortProbRadio_value = parametriSalvati.sortProbRadio_value || true;
+            sortDistanceRadio_value = parametriSalvati.sortDistanceRadio_value || false;
+            sortCoeffRadio_value = parametriSalvati.sortCoeffRadio_value || false;
+
+        }
+
+
+    }
 
 })();
