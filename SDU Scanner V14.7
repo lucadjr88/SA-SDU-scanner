@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         SDU Scanner V14.6
+// @name         SDU Scanner V14.7
 // @namespace    http://tampermonkey.net/
-// @version      14.6
+// @version      14.7
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -11,7 +11,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V14.6 by lucadjr';
+    let titolo = 'SDU Scanner V14.7 by lucadjr';
     let currentX = 0, currentY = 0;
     let selectedColor = 'yellow';
     let fuel = 0;
@@ -35,7 +35,8 @@
     let maxdistanceFromSB = Infinity; //limite default
     let starbase_valore_iniziale = "";
     let fuel_range_min_valore_iniziale = 10;
-    let fuel_range_max_valore_iniziale = 40;
+    let fuel_max_valore_iniziale = 40;
+    let food_min_valore_iniziale = 10;
     let prima_SB_valore_iniziale = "11,-16";
     let seconda_SB_valore_iniziale = "-14,-16";
     let colore_prima_SB = "#E6E6FA"; /* Lavender */
@@ -72,6 +73,7 @@
     let subwarpSpeed = 0;
     let scanCooldown = 0;
     let sduxScan = 0;
+    let scanCost = 0;
 
     let intervalId = null;
     let previousScan = new Map();
@@ -259,21 +261,17 @@
 
     const fuel_range_minContainer = document.createElement('div');
     fuel_range_minContainer.style.display = 'flex';
-    //fuel_range_minContainer.style.flexDirection = 'column';
-    //fuel_range_minContainer.style.margin = '5px';
-    //fuel_range_minContainer.style.border = '1px solid black'; // Aggiungi questa linea
     SmartRangeContainer.appendChild(fuel_range_minContainer);
 
     const fuel_range_minTxt = document.createElement('input');
     fuel_range_minTxt.type = 'text';
-    fuel_range_minTxt.value = '10';
-    fuel_range_minTxt.name = fuel_range_min_valore_iniziale;
+    fuel_range_minTxt.value = fuel_range_min_valore_iniziale;
+    fuel_range_minTxt.name = "fuel_range_minTxt";
     fuel_range_minTxt.addEventListener('input', (e) => {
         fuel_range_min_valore_iniziale = e.target.value ? parseInt(e.target.value) : fuel_range_min_valore_iniziale;
         salva_parametri();
     });
     fuel_range_minTxt.size = '7';
-    //fuel_range_minTxt.style.margin = '4px';
     fuel_range_minTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
     fuel_range_minContainer.appendChild(fuel_range_minTxt);
 
@@ -281,29 +279,26 @@
     fuel_range_minLabel.textContent = 'Range min.';
     fuel_range_minContainer.appendChild(fuel_range_minLabel);
 
-    const fuel_range_maxContainer = document.createElement('div');
-    fuel_range_maxContainer.style.display = 'flex';
-    //fuel_range_maxContainer.style.flexDirection = 'column';
-    //fuel_range_maxContainer.style.margin = '5px';
-    //fuel_range_maxContainer.style.border = '1px solid black'; // Aggiungi questa linea
-    SmartRangeContainer.appendChild(fuel_range_maxContainer);
+    const fuel_maxContainer = document.createElement('div');
+    fuel_maxContainer.style.display = 'flex';
+    SmartRangeContainer.appendChild(fuel_maxContainer);
 
-    const fuel_range_maxTxt = document.createElement('input');
-    fuel_range_maxTxt.type = 'text';
-    fuel_range_maxTxt.value = '40';
-    fuel_range_maxTxt.name = fuel_range_max_valore_iniziale;
-    fuel_range_maxTxt.addEventListener('input', (e) => {
-        fuel_range_max_valore_iniziale = e.target.value ? parseInt(e.target.value) : fuel_range_max_valore_iniziale;
+    const fuel_maxTxt = document.createElement('input');
+    fuel_maxTxt.type = 'text';
+    fuel_maxTxt.value = fuel_max_valore_iniziale;
+    fuel_maxTxt.name = "fuel_maxTxt";
+    fuel_maxTxt.addEventListener('input', (e) => {
+        fuel_max_valore_iniziale = e.target.value ? parseInt(e.target.value) : fuel_max_valore_iniziale;
         salva_parametri();
     });
-    fuel_range_maxTxt.size = '7';
-    //fuel_range_maxTxt.style.margin = '4px';
-    fuel_range_maxTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
-    fuel_range_maxContainer.appendChild(fuel_range_maxTxt);
+    fuel_maxTxt.size = '7';
+    //fuel_maxTxt.style.margin = '4px';
+    fuel_maxTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    fuel_maxContainer.appendChild(fuel_maxTxt);
 
     const fuel_range_maxLabel = document.createElement('label');
     fuel_range_maxLabel.textContent = 'Fuel max';
-    fuel_range_maxContainer.appendChild(fuel_range_maxLabel);
+    fuel_maxContainer.appendChild(fuel_range_maxLabel);
 
     const fuelContainer = document.createElement('div');
     fuelContainer.style.display = 'flex';
@@ -324,6 +319,43 @@
     const FuelLabel = document.createElement('label');
     FuelLabel.textContent = 'Fuel';
     fuelContainer.appendChild(FuelLabel);
+
+    const food_minContainer = document.createElement('div');
+    food_minContainer.style.display = 'flex';
+    SmartRangeContainer.appendChild(food_minContainer);
+
+    const food_minTxt = document.createElement('input');
+    food_minTxt.type = 'text';
+    food_minTxt.value = food_min_valore_iniziale;
+    food_minTxt.name = "food_minTxt";
+    food_minTxt.addEventListener('input', (e) => {
+        food_min_valore_iniziale = e.target.value ? parseInt(e.target.value) : food_min_valore_iniziale;
+        salva_parametri();
+    });
+    food_minTxt.size = '7';
+    food_minTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    food_minContainer.appendChild(food_minTxt);
+
+    const food_minLabel = document.createElement('label');
+    food_minLabel.textContent = 'Food min.';
+    food_minContainer.appendChild(food_minLabel);
+
+    const food_Container = document.createElement('div');
+    food_Container.style.display = 'flex';
+    SmartRangeContainer.appendChild(food_Container);
+
+    const foodTxt = document.createElement('input');
+    foodTxt.type = 'text';
+    foodTxt.value = 'foodTxt';
+    foodTxt.name = 'foodTxt';
+    foodTxt.size = '7';
+    //foodTxt.style.margin = '4px';
+    foodTxt.style.width = '50px'; // Imposta una larghezza specifica in pixel
+    food_Container.appendChild(foodTxt);
+
+    const FoodLabel = document.createElement('label');
+    FoodLabel.textContent = 'Food';
+    food_Container.appendChild(FoodLabel);    
 
     const doublecheckContainer = document.createElement('div');
     doublecheckContainer.style.display = 'flex';
@@ -1040,6 +1072,7 @@
     button.style.border = 'none';
     button.style.borderRadius = '5px';
     button.style.cursor = 'pointer';
+    button.addEventListener('click', toggleScan);
     buttondiv.appendChild(button);
 
     // Creazione di un elemento <select> per la lista di nomi
@@ -1061,16 +1094,17 @@
     overlayFlotte.style.overflowY = 'auto'; // Scroll verticale se necessario
     overlayFlotte.style.fontFamily = 'Arial, sans-serif'; // Font moderno
     overlayFlotte.style.fontSize = '14px'; // Dimensione del testo
-    overlayFlotte.size = 10; // Mostra fino a 10 elementi contemporaneamente
-    buttondiv.appendChild(overlayFlotte);
-
+    //overlayFlotte.size = 10; // Mostra fino a 10 elementi contemporaneamente
     // Aggiungi un evento per aggiornare fleetInput.value quando viene selezionato un nome
     overlayFlotte.addEventListener('change', () => {
+        toggleScan(); // Ferma la scansione automatica
         fleetInput.value = overlayFlotte.value; // Imposta il valore selezionato
         fleetInput.dispatchEvent(new Event('input')); // Simula l'evento 'input'
         salva_parametri(); // Salva i parametri aggiornati
         overlayFlotte.style.display = 'none'; // Nascondi la lista dopo la selezione
+        toggleScan(); // Avvia la scansione automatica
     });
+    buttondiv.appendChild(overlayFlotte);
 
 
 
@@ -1100,7 +1134,6 @@
     byebye.textContent = 'Report bugs, improvements or comment at lucadjr@hotmail.it                        if you like the app please donate 7sZFMdaGCATXsJuWfj19ExnLt9P7RVm4Bykmvz2Jrh5x';
     byebye.style.userSelect = 'text';
     byebyecontainer.appendChild(byebye);
-    button.addEventListener('click', toggleScan);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////
     updateParametri();
 
@@ -1317,8 +1350,16 @@
             const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, currentX, currentY));
             const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, currentX, currentY));
             //debugTxt.value = `1: ${distanza_primaSB}, 2: ${distanza_secondaSB}`;
-            const primaSBfiltered_Data = data.filter(item => distanza_primaSB <= maxdistanceFromSB);
-            const secondaSBfiltered_Data = data.filter(item => distanza_secondaSB <= maxdistanceFromSB);
+            const primaSBfiltered_Data = data.filter(item => {
+                const distance = parseFloat(calculateDistance(primaSBx, primaSBy, item.x, item.y));
+                return distance <= maxdistanceFromSB && distance < distanza_primaSB;
+            });
+            const secondaSBfiltered_Data = data.filter(item => {
+                const distance = parseFloat(calculateDistance(secondaSBx, secondaSBy, item.x, item.y));
+                return distance <= maxdistanceFromSB && distance < distanza_secondaSB;
+            });
+            //const primaSBfiltered_Data = data.filter(item => distanza_primaSB <= maxdistanceFromSB);
+            //const secondaSBfiltered_Data = data.filter(item => distanza_secondaSB <= maxdistanceFromSB);
             filtered_Data = [...new Set([...primaSBfiltered_Data, ...secondaSBfiltered_Data])];
             if (distanza_primaSB < distanza_secondaSB) {
                 SBcoordsTxt.value = `${primaSBx},${primaSBy}`;
@@ -1728,19 +1769,42 @@
                 fuelTxt.value = fuel + "%";
                 if (SmartRangecheckbox.checked) {
                     let distanza_calc_fuel = 0;
-                    let fuel_range_max = parseInt(fuel_range_maxTxt.value);
+                    let distanza_calc_food = 0;
+                    let fuel_range_max = parseInt(fuel_maxTxt.value);
                     let fuel_range_min = parseInt(fuel_range_minTxt.value);
 
                     if (fuel >= fuel_range_max) {
                         distanza_calc_fuel = maxDistancefromSB_valore_iniziale;
                     } else {
                         distanza_calc_fuel = Math.max(fuel_range_min, Math.floor((fuel / fuel_range_max) * maxDistancefromSB_valore_iniziale));
+                        
+                    }
+
+                    let food_min = parseInt(food_minTxt.value);
+                    if (parseInt(foodTxt.value) < food_min) {
+                        distanza_calc_food = (parseInt(foodTxt.value) / food_min) * maxDistancefromSB_valore_iniziale;
+                    }
+                    else {
+                        distanza_calc_food = maxDistancefromSB_valore_iniziale;
+                        
+                    }
+
+                    let distanza_calcolata = 0;
+                    if (distanza_calc_food < distanza_calc_fuel) {
+                        distanza_calcolata = distanza_calc_food;
+                        foodTxt.style.backgroundColor = 'red';
+                        fuelTxt.style.backgroundColor = 'white';
+                    }
+                    else {
+                        distanza_calcolata = distanza_calc_fuel;
+                        fuelTxt.style.backgroundColor = 'red';
+                        foodTxt.style.backgroundColor = 'white';
                     }
                     let distanza_flotta = parseFloat(calculateDistance(currentX, currentY, starbaseX, starbaseY));
-                    if (distanza_calc_fuel <= distanza_flotta - 2) {
-                        maxDistancefromSBTxt.value = (distanza_flotta - 2).toFixed(1);
+                    if (distanza_calcolata <= distanza_flotta) {
+                        maxDistancefromSBTxt.value = (distanza_flotta).toFixed(1);
                     } else {
-                        maxDistancefromSBTxt.value = distanza_calc_fuel.toFixed(1);
+                        maxDistancefromSBTxt.value = distanza_calcolata.toFixed(1);
                     }
                 }
                 else {
@@ -1756,7 +1820,10 @@
             let percentageMatch = cargoText.match(/\((\d+)%\)/);
             // Estrarre il numero prima di "Food" (es. 31124)
             let foodMatch = cargoText.match(/([\d,.]+)\s*<span style="color:#08f414">Food<\/span>/);
+            //foodTxt.value = foodMatch ? foodMatch[1].replace(/,/g, '') : 'N/A'; // Rimuove le virgole
+            foodTxt.value = foodMatch ? foodMatch[1].replace(/[.,]/g, '') : 'N/A'; // Rimuove virgole e punti
         }
+        
     }
     function ocrUpdatesize(size) {
         let sizestr = String(size) + 'px';
@@ -1869,6 +1936,8 @@
                             scanCooldown = value;
                         } else if (label.includes("SDU per Scan")) {
                             sduxScan = value;
+                        }else if (label.includes("Scan Cost")) {
+                            scanCost = value;
                         }
                     }
                 }
@@ -1928,7 +1997,8 @@
 
             subwarpSpeed: subwarpSpeed,
             scanCooldown: scanCooldown,
-            sduxScan: sduxScan
+            sduxScan: sduxScan,
+            scanCost: scanCost,
         });
 
         // Assegna il JSON a paramJsonText.value
@@ -2000,7 +2070,8 @@
 
             SmartRangecheckbox_value: SmartRangecheckbox_value,
             fuel_range_min_valore_iniziale: fuel_range_min_valore_iniziale,
-            fuel_range_max_valore_iniziale: fuel_range_max_valore_iniziale,
+            fuel_max_valore_iniziale: fuel_max_valore_iniziale,
+            food_min_valore_iniziale: food_min_valore_iniziale,
 
             doublecheckbox_value: doublecheckbox_value,
             prima_SB_valore_iniziale: prima_SB_valore_iniziale,
@@ -2051,7 +2122,8 @@
 
             SmartRangecheckbox_value = parametriSalvati.SmartRangecheckbox_value | false;
             fuel_range_min_valore_iniziale = parametriSalvati.fuel_range_min_valore_iniziale || 10;
-            fuel_range_max_valore_iniziale = parametriSalvati.fuel_range_max_valore_iniziale || 40;
+            fuel_max_valore_iniziale = parametriSalvati.fuel_max_valore_iniziale || 40;
+            food_min_valore_iniziale = parametriSalvati.food_min_valore_iniziale || 0;
 
             doublecheckbox_value = parametriSalvati.doublecheckbox_value | false;
             prima_SB_valore_iniziale = parametriSalvati.prima_SBTxt || "11,-16";
