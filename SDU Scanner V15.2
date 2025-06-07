@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SDU Scanner V15
 // @namespace    http://tampermonkey.net/
-// @version      15.1
+// @version      15.2
 // @description  Trova la percentuale più alta di SDU trovate nel range di distanza dalla flotta, per funzionare la scheda della flotta specificata deve essere quella aperta per ultima
 // @author       lucadjr
 // @match        *://*atlas.eveeye.com/*
@@ -11,7 +11,7 @@
 
 (function () {
     'use strict';
-    let titolo = 'SDU Scanner V15.1 by lucadjr';
+    let titolo = 'SDU Scanner V15.2 by lucadjr';
     let currentX = 0, currentY = 0;
     let selectedColor = 'yellow';
     let fuel = 0;
@@ -1190,9 +1190,10 @@
     function simulateButtonClick() {
         if (intervalId != null) {
             //<img width="20" height="20" class="ui-dep-inv syncicon fleet_sync_ico" src="img/icon/sync_b_off.png" onclick="
-            if (characterID != 0) { sa_getUserRentals(characterID, false, true); } 
-            else { toggleChars('on'); 
-                
+            if (characterID != 0) { sa_getUserRentals(characterID, false, true); }
+            else {
+                toggleChars('on');
+
             }//" title="Update Fleets" alt="Update Fleets" style="opacity: 1;">
         }
     }
@@ -1589,42 +1590,59 @@
 
 
         // Calcola le distanze e aggiorna le coordinate SB
-        if (closestToMaxCoeff !== null) {
-            const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, closestToMaxCoeff.x, closestToMaxCoeff.y));
-            const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, closestToMaxCoeff.x, closestToMaxCoeff.y));
+        if (doublecheckbox.checked) {
+            if (closestToMaxCoeff !== null) {
+                const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, closestToMaxCoeff.x, closestToMaxCoeff.y));
+                const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, closestToMaxCoeff.x, closestToMaxCoeff.y));
 
-            if (distanza_primaSB < distanza_secondaSB) {
-                closestToMaxCoeff.sbCoordsx = primaSBx;
-                closestToMaxCoeff.sbCoordsy = primaSBy;
-            } else {
-                closestToMaxCoeff.sbCoordsx = secondaSBx;
-                closestToMaxCoeff.sbCoordsy = secondaSBy;
+                if (distanza_primaSB < distanza_secondaSB) {
+                    closestToMaxCoeff.sbCoordsx = primaSBx;
+                    closestToMaxCoeff.sbCoordsy = primaSBy;
+                } else {
+                    closestToMaxCoeff.sbCoordsx = secondaSBx;
+                    closestToMaxCoeff.sbCoordsy = secondaSBy;
+                }
             }
-        }
 
-        if (percCoord_seconda_scelta !== null) {
-            const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, percCoord_seconda_scelta.x, percCoord_seconda_scelta.y));
-            const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, percCoord_seconda_scelta.x, percCoord_seconda_scelta.y));
+            if (percCoord_seconda_scelta !== null) {
+                const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, percCoord_seconda_scelta.x, percCoord_seconda_scelta.y));
+                const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, percCoord_seconda_scelta.x, percCoord_seconda_scelta.y));
 
-            if (distanza_primaSB < distanza_secondaSB) {
-                percCoord_seconda_scelta.sbCoordsx = primaSBx;
-                percCoord_seconda_scelta.sbCoordsy = primaSBy;
-            } else {
-                percCoord_seconda_scelta.sbCoordsx = secondaSBx;
-                percCoord_seconda_scelta.sbCoordsy = secondaSBy;
+                if (distanza_primaSB < distanza_secondaSB) {
+                    percCoord_seconda_scelta.sbCoordsx = primaSBx;
+                    percCoord_seconda_scelta.sbCoordsy = primaSBy;
+                } else {
+                    percCoord_seconda_scelta.sbCoordsx = secondaSBx;
+                    percCoord_seconda_scelta.sbCoordsy = secondaSBy;
+                }
             }
-        }
 
-        if (percCoord_terza_scelta !== null) {
-            const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, percCoord_terza_scelta.x, percCoord_terza_scelta.y));
-            const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, percCoord_terza_scelta.x, percCoord_terza_scelta.y));
+            if (percCoord_terza_scelta !== null) {
+                const distanza_primaSB = parseFloat(calculateDistance(primaSBx, primaSBy, percCoord_terza_scelta.x, percCoord_terza_scelta.y));
+                const distanza_secondaSB = parseFloat(calculateDistance(secondaSBx, secondaSBy, percCoord_terza_scelta.x, percCoord_terza_scelta.y));
 
-            if (distanza_primaSB < distanza_secondaSB) {
-                percCoord_terza_scelta.sbCoordsx = primaSBx;
-                percCoord_terza_scelta.sbCoordsy = primaSBy;
-            } else {
-                percCoord_terza_scelta.sbCoordsx = secondaSBx;
-                percCoord_terza_scelta.sbCoordsy = secondaSBy;
+                if (distanza_primaSB < distanza_secondaSB) {
+                    percCoord_terza_scelta.sbCoordsx = primaSBx;
+                    percCoord_terza_scelta.sbCoordsy = primaSBy;
+                } else {
+                    percCoord_terza_scelta.sbCoordsx = secondaSBx;
+                    percCoord_terza_scelta.sbCoordsy = secondaSBy;
+                }
+            }
+        } else {
+            // Prendi le coordinate da SBcoordsTxt.value (es. "11,-16")
+            let sbCoordsArr = SBcoordsTxt.value.split(',').map(Number);
+            if (closestToMaxCoeff !== null) {
+                closestToMaxCoeff.sbCoordsx = sbCoordsArr[0];
+                closestToMaxCoeff.sbCoordsy = sbCoordsArr[1];
+            }
+            if (percCoord_seconda_scelta !== null) {
+                percCoord_seconda_scelta.sbCoordsx = sbCoordsArr[0];
+                percCoord_seconda_scelta.sbCoordsy = sbCoordsArr[1];
+            }
+            if (percCoord_terza_scelta !== null) {
+                percCoord_terza_scelta.sbCoordsx = sbCoordsArr[0];
+                percCoord_terza_scelta.sbCoordsy = sbCoordsArr[1];
             }
         }
 
